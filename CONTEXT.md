@@ -31,3 +31,15 @@ _Avoid_: Merge, split-in-place, quantity adjustment
 **Retired**:
 A Flip that was re-split. It is not owned, not sold, and not a P&L unit; its children are.
 _Avoid_: Deleted, cancelled, sold, archived
+
+**Operator**:
+A login that owns exactly one Books.
+_Avoid_: account, user, tenant
+
+**Books**:
+One Operator's isolated Acquisitions, Flips, Listings, and Sales.
+_Avoid_: tenant, account, database
+
+**Instance admin**:
+A capability on an Operator: toggle sign-up, and open a read-only inspector on any Books.
+_Avoid_: superuser, global admin, impersonation
