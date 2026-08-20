@@ -5,7 +5,7 @@ Personal flip-sales profit tracking: what you acquire, what you still own, and w
 ## Language
 
 **Flip**:
-A single physical thing you own. It never becomes a different physical thing; the unit profit attaches to it.
+A single physical thing you own. It never becomes a different physical thing; Profit attaches to it.
 _Avoid_: Item, piece, SKU, asset, inventory unit, product, unit
 
 **Acquisition**:
@@ -75,3 +75,23 @@ _Avoid_: postage, label, shipping
 **Supplies**:
 Money for packing materials on a Sale.
 _Avoid_: packaging, materials, shipping supplies
+
+**Sale price**:
+What the buyer paid for the goods on a Sale, not shipping.
+_Avoid_: ask, sticker, hammer, item price, sold for, proceeds
+
+**Buyer-paid shipping**:
+Shipping the buyer paid on a Sale. $0 means local pickup or that the channel handled shipping off the books.
+_Avoid_: shipping charged, postage collected, shipping income, outbound shipping
+
+**Proceeds**:
+Sale price plus Buyer-paid shipping. Excludes remitted tax. Not typed.
+_Avoid_: revenue, sales, gross, payout, amount received, income
+
+**Profit**:
+Proceeds minus Acquisition cost, Listing spend, Marketplace fee, Outbound shipping, and Supplies for that Flip. Exists only once the Flip has a Sale; a negative amount is a loss.
+_Avoid_: net, earnings, income, gain, margin, realized profit, gross profit
+
+**Sale date**:
+The day the Sale occurred. Profit happens on this day.
+_Avoid_: payout date, cleared date, listed date, closed date
