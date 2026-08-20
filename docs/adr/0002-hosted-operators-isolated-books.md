@@ -16,7 +16,7 @@ Fliptrack is used by Operators, each with their own Books. It lives as a long-ru
 - Sign-up creates an Operator and starts closed.
 - Instance admin may inspect any Books read-only, and cannot mutate them.
 - Specific host, database engine, and auth method are not decided here.
-- Flip, Acquisition, Listing, Sale, and Inventory stay inside one Books.
+- Flip, Acquisition, Listing, Sale, Write-off, and Inventory stay inside one Books.
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision ticket: [Who uses Fliptrack, and where does it live?](https://github.com/BenPlusPlus/fliptrack/issues/5).

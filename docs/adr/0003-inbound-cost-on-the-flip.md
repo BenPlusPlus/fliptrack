@@ -19,6 +19,7 @@ A Flip stores Item cost, Tax paid, and Inbound shipping. Acquisition cost is the
 - Other acquisition outgo (duties, buyer-protection) folds into Item cost.
 - Buyer-charged shipping and marketplace-remitted tax are not costs.
 - Listing spend can exist with no Sale.
+- Return postage is Outbound shipping on the Undone Sale, not Inbound shipping. See [ADR-0006](0006-write-off-undo-hitch.md).
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision ticket: [How do costs attach to a flip?](https://github.com/BenPlusPlus/fliptrack/issues/7).

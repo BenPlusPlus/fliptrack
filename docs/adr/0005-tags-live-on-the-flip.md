@@ -1,6 +1,6 @@
 # Tags live on the Flip, live and flat
 
-A Tag is a named label in one Books. Only a Flip has Tags; a Flip may have many, including none. The Operator creates a Tag by naming it. The set is flat — no tree, no privileged Category. The Flip's Tags are live and may change after Sale. Re-split copies the parent's Tags onto each child; the sets are then independent. First-useful-version slices are Profit by Tag, Inventory by Tag as Acquisition cost, counts split unsold vs sold, and the same three for untagged Flips. Slices overlap. Rename keeps the Tag; delete removes it from the Books and from every Flip that had it. No merge.
+A Tag is a named label in one Books. Only a Flip has Tags; a Flip may have many, including none. The Operator creates a Tag by naming it. The set is flat — no tree, no privileged Category. The Flip's Tags are live and may change after Sale or Write-off. Re-split copies the parent's Tags onto each child; the sets are then independent. First-useful-version slices are Profit by Tag, Inventory by Tag as Acquisition cost, counts split unsold vs sold vs written-off, and the same three for untagged Flips. Slices overlap. Rename keeps the Tag; delete removes it from the Books and from every Flip that had it. No merge.
 
 ## Considered options
 
