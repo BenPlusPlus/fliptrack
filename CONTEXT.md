@@ -43,3 +43,35 @@ _Avoid_: tenant, account, database
 **Instance admin**:
 A capability on an Operator: toggle sign-up, and open a read-only inspector on any Books.
 _Avoid_: superuser, global admin, impersonation
+
+**Item cost**:
+That Flip's share of the price paid for the goods, before tax and inbound shipping.
+_Avoid_: value, lot price, unit cost, sticker, merchandise, purchase price
+
+**Tax paid**:
+Tax paid at Acquisition for that Flip.
+_Avoid_: sales tax, VAT, acquisition tax
+
+**Inbound shipping**:
+Money paid to get that Flip to the Operator.
+_Avoid_: postage, freight, shipping
+
+**Acquisition cost**:
+Item cost plus Tax paid plus Inbound shipping for that Flip.
+_Avoid_: landed cost, basis, purchase cost
+
+**Listing spend**:
+Money paid to run or promote a Listing.
+_Avoid_: ad spend, promoted listings, insertion fee, bump
+
+**Marketplace fee**:
+Money the selling channel took on a Sale.
+_Avoid_: final value fee, commission, processing fee, selling fee
+
+**Outbound shipping**:
+Money the Operator paid to ship a Sale.
+_Avoid_: postage, label, shipping
+
+**Supplies**:
+Money for packing materials on a Sale.
+_Avoid_: packaging, materials, shipping supplies
