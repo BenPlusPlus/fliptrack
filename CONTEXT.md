@@ -25,7 +25,7 @@ The Flips still owned: each Flip that is not sold and not retired.
 _Avoid_: Stock as a separate object, catalog
 
 **Re-split**:
-Replacing one Flip with two or more new Flips on the same Acquisition. Allowed only when that Flip is unsold and has no live Listing.
+Replacing one Flip with two or more new Flips on the same Acquisition. Allowed only when that Flip is unsold and has no live Listing. The new Flips start with the parent's Tags.
 _Avoid_: Merge, split-in-place, quantity adjustment
 
 **Retired**:
@@ -37,12 +37,16 @@ A login that owns exactly one Books.
 _Avoid_: account, user, tenant
 
 **Books**:
-One Operator's isolated Acquisitions, Flips, Listings, and Sales.
+One Operator's isolated Acquisitions, Flips, Listings, Sales, and Tags.
 _Avoid_: tenant, account, database
 
 **Instance admin**:
 A capability on an Operator: toggle sign-up, and open a read-only inspector on any Books.
 _Avoid_: superuser, global admin, impersonation
+
+**Tag**:
+A named label in one Books that only a Flip carries. A Flip may have many, including none. The Operator creates one by naming it; the set is flat, has no privileged Category, and does not freeze on Sale.
+_Avoid_: category, label, folder, collection, hashtag
 
 **Item cost**:
 That Flip's share of the price paid for the goods, before tax and inbound shipping.
