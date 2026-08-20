@@ -15,7 +15,7 @@ Fliptrack is used by Operators, each with their own Books. It lives as a long-ru
 - Login is required. Sitting on one machine is not enough.
 - Sign-up creates an Operator and starts closed.
 - Instance admin may inspect any Books read-only, and cannot mutate them.
-- Specific host, database engine, and auth method are not decided here.
+- Host and engine are [ADR-0007](0007-railway-postgres-pitr.md). Auth method is not decided here.
 - Flip, Acquisition, Listing, Sale, Write-off, and Inventory stay inside one Books.
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
