@@ -19,7 +19,7 @@ Fliptrack runs as one always-on Node process on Railway (Hobby). Books live in a
 
 - Not Serverless, not scale-to-zero. One process, one region, single-node Postgres (not Patroni HA).
 - Restore is a new sibling Postgres; cut `DATABASE_URL` over. Volume snapshots are not the restore path.
-- Auth method is not decided here.
+- How an Operator signs in is [ADR-0008](0008-email-password-first-run-wizard.md).
 - Operator-downloadable Books stays unspecified: portability, not this backup.
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
