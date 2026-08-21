@@ -8,7 +8,7 @@ Fliptrack accounts for profit per Flip: one physical thing, one record, from Acq
 - **Listing as the unit** — copies the marketplace. Breaks when one Flip has two listings, or none yet.
 - **Sale as the unit** — works for kits, loses unsold Inventory and per-Flip P&L.
 - **Quantity on a line** — one record, leftover qty. Conflicts with per-Flip profit and different sale dates or channels.
-- **Chosen: Flip + Acquisition + Listing + Sale + Write-off** — split at or after intake; a Sale or Write-off may consume Flips from any Acquisition(s); a Listing is a live or ended attempt. Write-off, undo, and hitch are [ADR-0006](0006-write-off-undo-hitch.md).
+- **Chosen: Flip + Acquisition + Listing + Sale + Write-off** — split at or after intake; a Sale or Write-off may consume Flips from any Acquisition(s); a Listing is a live or ended attempt whose Flip set is fixed ([ADR-0009](0009-listing-flip-set-is-fixed.md)). Write-off, undo, and hitch are [ADR-0006](0006-write-off-undo-hitch.md).
 
 ## Consequences
 

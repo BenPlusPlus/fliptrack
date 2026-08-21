@@ -18,6 +18,7 @@ A sold Flip's Profit is Proceeds (Sale price plus Buyer-paid shipping) minus Acq
 - Remitted tax is not Proceeds. $0 Buyer-paid shipping is local pickup or channel-handled shipping.
 - Listing spend can exist with no Sale; it enters Profit when the Flip (or a child after Re-split) has a standing Sale or Write-off.
 - Listing spend is frozen once any Flip on that Listing has a standing Sale or Write-off.
+- The Flips a Listing includes are fixed at create ([ADR-0009](0009-listing-flip-set-is-fixed.md)). Ending the Listing does not change who was on it for Listing spend.
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision ticket: [What does profit mean?](https://github.com/BenPlusPlus/fliptrack/issues/8).

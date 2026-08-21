@@ -13,7 +13,7 @@ The event that brought one or more Flips into ownership — a thrift buy, an onl
 _Avoid_: Purchase, lot, buy, receipt, order
 
 **Listing**:
-An attempt to sell one or more Flips. It is live or ended.
+An attempt to sell a fixed set of one or more Flips. Live or ended: ended when the Operator ends it or when no Flip on it is still Inventory, and ended stays ended.
 _Avoid_: Post, ad, offer
 
 **Sale**:

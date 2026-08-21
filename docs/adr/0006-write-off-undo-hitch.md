@@ -10,7 +10,7 @@ A Flip leaves Inventory by a standing Sale, a Re-split (Retired), or a standing 
 - **Book a loss on undo while Inventory** — one Flip, two P&L moments; Inventory would no longer be Acquisition cost only.
 - **Whole kit or bag undoes** — the buyer kept two shirts, or Goodwill took four; those events stood.
 - **Return postage as Inbound shipping** — would rewrite Acquisition cost.
-- **Write-off on a live Listing** — would silently end a Listing to trash a Flip. End the Listing first, as with Re-split.
+- **Write-off on a live Listing** — would silently end a Listing to trash a Flip. End the Listing first, as with Re-split. You cannot take one Flip off a live Listing to Write-off the rest in place ([ADR-0009](0009-listing-flip-set-is-fixed.md)).
 
 ## Consequences
 
