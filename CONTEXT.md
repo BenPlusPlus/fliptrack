@@ -41,7 +41,7 @@ A Flip that was re-split. It is not owned, not sold, not written off, and not a 
 _Avoid_: Deleted, cancelled, sold, archived
 
 **Operator**:
-A login that owns exactly one Books. The login handle is an email unique on the instance.
+A login that owns exactly one Books. The login handle is an email unique on the instance; it does not change after the Operator is created.
 _Avoid_: account, user, tenant
 
 **Books**:
