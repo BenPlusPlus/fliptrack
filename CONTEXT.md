@@ -17,7 +17,7 @@ An attempt to sell a fixed set of one or more Flips. Live or ended: ended when t
 _Avoid_: Post, ad, offer
 
 **Sale**:
-The event in which one or more Flips were sold. It stands, or it is Undone.
+The event in which one or more Flips were sold. It stands, or it is Undone. It has optional notes.
 _Avoid_: Order, transaction, payout, purchase
 
 **Write-off**:
