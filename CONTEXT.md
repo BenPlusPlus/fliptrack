@@ -5,7 +5,7 @@ Personal flip-sales profit tracking: what you acquire, what you still have in st
 ## Language
 
 **Flip**:
-A single physical thing you own. It never becomes a different physical thing; Profit attaches to it.
+A single physical thing you own. It never becomes a different physical thing; Profit attaches to it. It has a required short name and optional notes.
 _Avoid_: Item, piece, SKU, asset, inventory unit, product, unit
 
 **Acquisition**:
@@ -45,7 +45,7 @@ A login that owns exactly one Books. The login handle is an email unique on the 
 _Avoid_: account, user, tenant
 
 **Books**:
-One Operator's isolated Acquisitions, Flips, Listings, Sales, Write-offs, and Tags.
+One Operator's isolated Acquisitions, Flips, Listings, Sales, Write-offs, Tags, and Channels.
 _Avoid_: tenant, account, database
 
 **Instance admin**:
@@ -54,7 +54,11 @@ _Avoid_: superuser, global admin, impersonation
 
 **Tag**:
 A named label in one Books that only a Flip carries. A Flip may have many, including none. The Operator creates one by naming it; the set is flat, has no privileged Category, and does not freeze on Sale or Write-off.
-_Avoid_: category, label, folder, collection, hashtag
+_Avoid_: category, label, folder, collection, hashtag, Channel
+
+**Channel**:
+A named selling venue in one Books. A Sale has exactly one. The Operator creates one by naming it; names are unique in the Books and case-insensitive.
+_Avoid_: marketplace, venue, platform, site, sold-on, Tag
 
 **Item cost**:
 That Flip's share of the price paid for the goods, before tax and inbound shipping.
@@ -103,6 +107,10 @@ _Avoid_: revenue, sales, gross, payout, amount received, income
 **Profit**:
 Proceeds minus Acquisition cost, Listing spend, Marketplace fee, Outbound shipping, and Supplies for that Flip. Exists once the Flip has a Sale or Write-off that is not Undone; a negative amount is a loss.
 _Avoid_: net, earnings, income, gain, margin, realized profit, gross profit
+
+**Acquisition date**:
+The day those Flips entered ownership. One date on the Acquisition.
+_Avoid_: purchase date, buy date, logged date, received date
 
 **Sale date**:
 The day the Sale occurred. Profit happens on this day.

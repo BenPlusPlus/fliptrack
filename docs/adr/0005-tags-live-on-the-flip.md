@@ -15,7 +15,7 @@ A Tag is a named label in one Books. Only a Flip has Tags; a Flip may have many,
 
 ## Consequences
 
-- Marketplace / channel is a Sale fact, not a Tag.
+- Marketplace / channel is a Sale fact, not a Tag. Channel as a named Books object is [ADR-0010](0010-channel-is-a-named-sale-fact.md).
 - A Flip with two Tags appears in both slices; summing Tag Profit is not all Profit.
 - Unused Tags stay in the Books until deleted.
 - Names are unique in the Books; `Shirts` and `shirts` are the same name.
