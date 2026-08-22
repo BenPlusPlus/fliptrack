@@ -9,11 +9,11 @@ A single physical thing you own. It never becomes a different physical thing; Pr
 _Avoid_: Item, piece, SKU, asset, inventory unit, product, unit
 
 **Acquisition**:
-The event that brought one or more Flips into ownership — a thrift buy, an online order, opening stock, or a gift.
+The event that brought one or more Flips into ownership — a thrift buy, an online order, opening stock, or a gift. It has a date and optional notes, no name; more Flips may be added later.
 _Avoid_: Purchase, lot, buy, receipt, order
 
 **Listing**:
-An attempt to sell a fixed set of one or more Flips. Live or ended: ended when the Operator ends it or when no Flip on it is still Inventory, and ended stays ended.
+An attempt to sell a fixed set of one or more Flips. It has a required short name and optional notes. Live or ended: ended when the Operator ends it or when no Flip on it is still Inventory, and ended stays ended.
 _Avoid_: Post, ad, offer
 
 **Sale**:
@@ -21,12 +21,16 @@ The event in which one or more Flips were sold. It stands, or it is Undone. It h
 _Avoid_: Order, transaction, payout, purchase
 
 **Write-off**:
-The event in which one or more Flips left Inventory with no buyer — donated, trashed, or lost. It stands, or it is Undone; a Flip cannot have both a Sale and a Write-off that stand.
+The event in which one or more Flips left Inventory with no buyer — donated, trashed, or lost. It stands, or it is Undone; a Flip cannot have both a Sale and a Write-off that stand. It has optional notes; no name and no Channel.
 _Avoid_: disposal, removal, discard, scrap, donation
 
 **Undone**:
 A Sale or Write-off that no longer stands because the Flip came back.
 _Avoid_: cancelled, void, reversed, failed, deleted
+
+**Hitch**:
+Leftover Marketplace fee, Outbound shipping, and Supplies from an Undone Sale or Write-off, snapshotted onto that Flip at undo. It enters Profit on the next standing Sale or Write-off, including via a Retired ancestor. Proceeds shares do not hitch.
+_Avoid_: adjustment, leftover as a named cost, carry-forward
 
 **Inventory**:
 The Flips still in stock: not sold, not written off, and not Retired. Undone Sales and Write-offs do not count; keep-for-self is still Inventory.
@@ -57,7 +61,7 @@ A named label in one Books that only a Flip carries. A Flip may have many, inclu
 _Avoid_: category, label, folder, collection, hashtag, Channel
 
 **Channel**:
-A named selling venue in one Books. A Sale has exactly one. The Operator creates one by naming it; names are unique in the Books and case-insensitive.
+A named selling venue in one Books; a Sale has exactly one. Names are unique in the Books and case-insensitive; rename keeps the Channel; delete is allowed only when no Sale uses it.
 _Avoid_: marketplace, venue, platform, site, sold-on, Tag
 
 **Item cost**:
@@ -81,7 +85,7 @@ Money paid to run or promote a Listing.
 _Avoid_: ad spend, promoted listings, insertion fee, bump
 
 **Marketplace fee**:
-Money the selling channel took on a Sale.
+Money the selling channel took on a Sale or Write-off.
 _Avoid_: final value fee, commission, processing fee, selling fee
 
 **Outbound shipping**:
