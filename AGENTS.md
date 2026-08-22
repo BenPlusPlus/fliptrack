@@ -11,3 +11,7 @@ Default role-named labels: `needs-triage`, `needs-info`, `ready-for-agent`, `rea
 ### Domain docs
 
 Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Remix app
+
+The app is Remix 3. Use `.agents/skills/remix/SKILL.md` for routes, controllers, data, auth, and tests.

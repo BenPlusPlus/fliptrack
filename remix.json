@@ -1,0 +1,19 @@
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "db": {
+    "adapter": {
+      "type": "postgres",
+      "connectionString": { "env": "DATABASE_URL" }
+    },
+    "migrations": {
+      "directory": "./db/migrations"
+    }
+  },
+  "test": {
+    "files": ["**/*.test.{ts,tsx}"],
+    "exclude": ["node_modules/**", "dist/**"],
+    "type": ["server"],
+    "concurrency": 1,
+    "setup": "./test/setup.ts"
+  }
+}
