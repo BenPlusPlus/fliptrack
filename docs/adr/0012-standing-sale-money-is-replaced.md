@@ -17,7 +17,7 @@ A standing Sale's typed amounts — Sale price, Buyer-paid shipping, Marketplace
 
 - Never-paid, Flip kept, is a $0 Sale, not a Write-off.
 - On a kit, an edit splits the new whole pro-rata by Acquisition cost across Flips that still stand. Undo still does not move sibling shares ([ADR-0006](0006-write-off-undo-hitch.md)): it shrinks each typed money line by that Flip's then-share; cost shares hitch as a snapshot; Proceeds shares are subtracted and do not hitch. Later edits do not rewrite hitch. If every Flip on the Sale is Undone, there is no standing money to edit.
-- Channel was not this decision. Write-off analog is a later ticket.
+- Channel was not this decision. Write-off analog is [ADR-0015](0015-standing-write-off-money-is-replaced.md).
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision ticket: [How do you change a standing Sale's money without undoing it?](https://github.com/BenPlusPlus/fliptrack/issues/16).

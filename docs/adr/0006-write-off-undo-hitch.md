@@ -18,7 +18,7 @@ A Flip leaves Inventory by a standing Sale, a Re-split (Retired), or a standing 
 - Profit exists without a Sale when a Write-off stands; it happens on Write-off date. Same formula.
 - Inventory stays Acquisition cost. Hitch is not a new cost name. Dump / hauler / ship-to-charity amounts are Outbound shipping on the Write-off.
 - Tag Profit includes written-off Flips; Inventory by Tag excludes them; counts split unsold vs sold vs written-off.
-- Partial refunds where the buyer keeps the Flip are not undo. Those amounts are replaced on the standing Sale ([ADR-0012](0012-standing-sale-money-is-replaced.md)).
+- Partial refunds where the buyer keeps the Flip are not undo. Those amounts are replaced on the standing Sale ([ADR-0012](0012-standing-sale-money-is-replaced.md)). Wrong or late Write-off costs are not undo; they are replaced on the standing Write-off ([ADR-0015](0015-standing-write-off-money-is-replaced.md)).
 - Undo shrinks each typed money line by that Flip's then-share so sibling dollar shares stay put. Hitch is that Flip's cost share at undo, a snapshot; later edits of the remaining deal do not rewrite it.
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).

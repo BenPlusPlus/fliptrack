@@ -1,6 +1,6 @@
 # Profit is net of every named cost, on Sale date
 
-A sold Flip's Profit is Proceeds (Sale price plus Buyer-paid shipping) minus Acquisition cost, its Listing spend, and its share of Marketplace fee, Outbound shipping, and Supplies. Profit happens on Sale date. A written-off Flip uses the same formula with $0 Proceeds, on Write-off date. Unsold Inventory is Acquisition cost, not hoped-for Profit. Shared Sale, Write-off, and Listing amounts split pro-rata by Acquisition cost — even by count if those are all $0 — including Listing spend from every Listing that included this Flip or a Retired ancestor, and hitch from every Undone Sale or Write-off that included this Flip or a Retired ancestor. A Flip's share on a standing Sale or Write-off does not move on undo. Replacing a standing Sale's typed amounts recomputes shares among Flips that still stand ([ADR-0012](0012-standing-sale-money-is-replaced.md)). Undo, Write-off, freeze, and hitch are [ADR-0006](0006-write-off-undo-hitch.md).
+A sold Flip's Profit is Proceeds (Sale price plus Buyer-paid shipping) minus Acquisition cost, its Listing spend, and its share of Marketplace fee, Outbound shipping, and Supplies. Profit happens on Sale date. A written-off Flip uses the same formula with $0 Proceeds, on Write-off date. Unsold Inventory is Acquisition cost, not hoped-for Profit. Shared Sale, Write-off, and Listing amounts split pro-rata by Acquisition cost — even by count if those are all $0 — including Listing spend from every Listing that included this Flip or a Retired ancestor, and hitch from every Undone Sale or Write-off that included this Flip or a Retired ancestor. A Flip's share on a standing Sale or Write-off does not move on undo. Replacing a standing Sale's or Write-off's typed amounts recomputes shares among Flips that still stand ([ADR-0012](0012-standing-sale-money-is-replaced.md), [ADR-0015](0015-standing-write-off-money-is-replaced.md)). Undo, Write-off, freeze, and hitch are [ADR-0006](0006-write-off-undo-hitch.md).
 
 ## Considered options
 
@@ -19,7 +19,7 @@ A sold Flip's Profit is Proceeds (Sale price plus Buyer-paid shipping) minus Acq
 - Listing spend can exist with no Sale; it enters Profit when the Flip (or a child after Re-split) has a standing Sale or Write-off.
 - Listing spend is frozen once any Flip on that Listing has a standing Sale or Write-off.
 - The Flips a Listing includes are fixed at create ([ADR-0009](0009-listing-flip-set-is-fixed.md)). Ending the Listing does not change who was on it for Listing spend.
-- A standing Sale's money and Sale date may be replaced; that is not a new realizing event ([ADR-0012](0012-standing-sale-money-is-replaced.md)).
+- A standing Sale's money and Sale date may be replaced; that is not a new realizing event ([ADR-0012](0012-standing-sale-money-is-replaced.md)). A standing Write-off's Outbound shipping, Supplies, and Write-off date may be replaced the same way ([ADR-0015](0015-standing-write-off-money-is-replaced.md)).
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision ticket: [What does profit mean?](https://github.com/BenPlusPlus/fliptrack/issues/8).
