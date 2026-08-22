@@ -5,23 +5,23 @@ Personal flip-sales profit tracking: what you acquire, what you still have in st
 ## Language
 
 **Flip**:
-A single physical thing you own. It never becomes a different physical thing; Profit attaches to it. It has a required short name and optional notes.
+A single physical thing you own. It never becomes a different physical thing; Profit attaches to it. Required short name and optional notes, both live; Tags stay live. Inbound amounts may be replaced while it is Inventory. A Flip never listed and never sold or written off may be removed.
 _Avoid_: Item, piece, SKU, asset, inventory unit, product, unit
 
 **Acquisition**:
-The event that brought one or more Flips into ownership — a thrift buy, an online order, opening stock, or a gift. It has a date and optional notes, no name; more Flips may be added later.
+The event that brought one or more Flips into ownership — a thrift buy, an online order, opening stock, or a gift. It has a date and optional notes, no name; more Flips may be added later. Removing its last unused Flip removes the Acquisition.
 _Avoid_: Purchase, lot, buy, receipt, order
 
 **Listing**:
-An attempt to sell a fixed set of one or more Flips. It has a required short name and optional notes. Live or ended: ended when the Operator ends it or when no Flip on it is still Inventory, and ended stays ended.
+An attempt to sell a fixed set of one or more Flips. Identified by that set and its Listing spend; no required name; optional notes. Live or ended: ended when the Operator ends it or when no Flip on it is still Inventory, and ended stays ended.
 _Avoid_: Post, ad, offer
 
 **Sale**:
-The event in which one or more Flips were sold. It stands, or it is Undone. It has optional notes.
+The event in which one or more Flips were sold. It stands, or it is Undone. While it stands, its Channel, Sale date, and typed money may be replaced. It has optional notes.
 _Avoid_: Order, transaction, payout, purchase
 
 **Write-off**:
-The event in which one or more Flips left Inventory with no buyer — donated, trashed, or lost. It stands, or it is Undone; a Flip cannot have both a Sale and a Write-off that stand. It has optional notes; no name and no Channel.
+The event in which one or more Flips left Inventory with no buyer — donated, trashed, or lost. It stands, or it is Undone; a Flip cannot have both a Sale and a Write-off that stand. While it stands, its Write-off date and typed money may be replaced. It has optional notes; no name and no Channel.
 _Avoid_: disposal, removal, discard, scrap, donation
 
 **Undone**:
