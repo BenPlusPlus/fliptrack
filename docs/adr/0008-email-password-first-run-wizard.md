@@ -19,7 +19,7 @@ An Operator signs in with email and password. Sign-up starts closed, so the firs
 - Instance admin may set a temporary password on any Operator’s login and must not impersonate or mutate that Operator’s Books ([ADR-0002](0002-hosted-operators-isolated-books.md)). The temp password is handed over out of band (no mail). That Operator must choose a new standing password before anything else.
 - Passwords chosen in the first-run or break-glass wizard are standing. Forced change applies only after an instance-admin reset of someone else.
 - Delete the setup secret from env to remove the break-glass lever.
-- No mail vendor on this map. The login handle does not change after create; a later map that has mail can add a verified change. Granting instance admin to another Operator is not decided here.
+- No mail vendor on this map. The login handle does not change after create; a later map that has mail can add a verified change. Instance admin stays on the first Operator ([ADR-0013](0013-instance-admin-stays-on-first-operator.md)).
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision tickets: [How does an Operator sign in?](https://github.com/BenPlusPlus/fliptrack/issues/14), [Can an Operator change their email?](https://github.com/BenPlusPlus/fliptrack/issues/17).

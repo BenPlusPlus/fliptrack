@@ -49,7 +49,7 @@ One Operator's isolated Acquisitions, Flips, Listings, Sales, Write-offs, Tags, 
 _Avoid_: tenant, account, database
 
 **Instance admin**:
-A capability on an Operator: toggle sign-up, open a read-only inspector on any Books, and set a temporary password on any Operator's login. It cannot mutate another Operator's Books.
+A capability on an Operator: toggle sign-up, open a read-only inspector on any Books, and set a temporary password on any Operator's login. It cannot mutate another Operator's Books. It exists on exactly one Operator — the first created on the instance — and is not granted or revoked.
 _Avoid_: superuser, global admin, impersonation
 
 **Tag**:
