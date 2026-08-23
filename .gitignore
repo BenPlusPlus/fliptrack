@@ -1,1 +1,8 @@
-/.agents/
+node_modules/
+db/*.sqlite
+tmp/
+.DS_Store
+.env
+.coverage/
+dist/
+*.log

@@ -1,0 +1,28 @@
+{
+  "name": "fliptrack",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --import remix/node-tsx server.ts",
+    "hmr": "node hmr.ts",
+    "start": "node --import remix/node-tsx server.ts",
+    "test": "remix test",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "remix db migrate",
+    "db:status": "remix db status"
+  },
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "pg": "^8.16.3",
+    "remix": "^3.0.0-beta.10"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/pg": "^8.15.5",
+    "embedded-postgres": "^18.1.0-beta.16",
+    "playwright": "^1.62.1",
+    "typescript": "latest"
+  }
+}
