@@ -2,6 +2,7 @@
   "name": "fliptrack",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.0.8",
   "scripts": {
     "dev": "node --watch --import remix/node-tsx server.ts",
     "hmr": "node hmr.ts",
@@ -12,7 +13,8 @@
     "db:status": "remix db status"
   },
   "engines": {
-    "node": ">=24.3.0"
+    "node": ">=24.3.0",
+    "pnpm": ">=11"
   },
   "dependencies": {
     "pg": "^8.16.3",

@@ -9,16 +9,16 @@ This slice is a hosted Remix 3 process with real Books: first-run wizard, login,
 Copy `.env.example` to `.env` and point `DATABASE_URL` at Postgres. Then:
 
 ```sh
-npm i
-npx remix db migrate
-npm run dev
+pnpm i
+pnpm db:migrate
+pnpm dev
 ```
 
 Open `http://localhost:44100`. With no Operator yet, `/login` sends you to `/oobe`. Create the instance-admin Operator with `SETUP_SECRET`.
 
 ```sh
-npm test
-npm run typecheck
+pnpm test
+pnpm typecheck
 ```
 
 ## Railway (Hobby)
@@ -33,7 +33,7 @@ A human creates the Railway project. App code does not create it.
    - `SESSION_SECRET` — long random string
    - `SETUP_SECRET` — first-run / break-glass gate (not the Operator password)
    - `NODE_ENV=production`
-5. Deploy this repo. The process runs `npm start`, migrates, and listens on `PORT`.
+5. Deploy this repo. The process runs `pnpm start`, migrates, and listens on `PORT`.
 6. Visit `/oobe`, enter the setup secret, email, and password. That creates the instance-admin Operator and empty Books.
 7. Delete `SETUP_SECRET` from env when you want the break-glass lever gone. `/oobe` then redirects to login.
 

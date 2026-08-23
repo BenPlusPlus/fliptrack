@@ -2,8 +2,10 @@ FROM node:24-bookworm-slim
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN corepack enable && corepack prepare pnpm@11.0.8 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod
 
 COPY app ./app
 COPY db ./db
