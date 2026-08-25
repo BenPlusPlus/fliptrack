@@ -9,23 +9,23 @@ importers:
   .:
     dependencies:
       pg:
-        specifier: ^8.16.3
+        specifier: 8.23.0
         version: 8.23.0
       remix:
-        specifier: ^3.0.0-beta.10
+        specifier: 3.0.0-beta.10
         version: 3.0.0-beta.10(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.0)(playwright@1.62.1)
     devDependencies:
       '@types/node':
         specifier: latest
         version: 26.2.0
       '@types/pg':
-        specifier: ^8.15.5
+        specifier: 8.23.1
         version: 8.23.1
       embedded-postgres:
-        specifier: ^18.1.0-beta.16
+        specifier: 18.1.0-beta.16
         version: 18.1.0-beta.16
       playwright:
-        specifier: ^1.62.1
+        specifier: 1.62.1
         version: 1.62.1
       typescript:
         specifier: latest
