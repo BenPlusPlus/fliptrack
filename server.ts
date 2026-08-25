@@ -1,3 +1,5 @@
+import './load-dev-env.ts'
+
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 

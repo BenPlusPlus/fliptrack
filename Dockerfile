@@ -10,7 +10,7 @@ RUN pnpm install --frozen-lockfile --prod
 COPY app ./app
 COPY db ./db
 COPY public ./public
-COPY server.ts tsconfig.json remix.json ./
+COPY server.ts load-dev-env.ts tsconfig.json remix.json ./
 
 ENV NODE_ENV=production
 EXPOSE 44100

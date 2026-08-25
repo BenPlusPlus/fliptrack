@@ -6,7 +6,7 @@ This slice is a hosted Remix 3 process with real Books: first-run wizard, login,
 
 ## Local
 
-Copy `.env.example` to `.env` and point `DATABASE_URL` at Postgres. Then:
+Copy `.env.example` to `.env` and point `DATABASE_URL` at Postgres. `pnpm dev`, `pnpm hmr`, and `pnpm db:*` load `.env` automatically. Then:
 
 ```sh
 pnpm i
