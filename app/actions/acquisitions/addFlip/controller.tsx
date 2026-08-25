@@ -15,16 +15,8 @@ import type { OperatorIdentity } from '../../../middleware/auth.ts'
 import type { Tag } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
-import {
-  errorBanner,
-  fieldStack,
-  ghostAction,
-  heading,
-  labelStyle,
-  lead,
-  leaveRow,
-  primaryAction,
-} from '../../../ui/styles.ts'
+import { ActionStack, MoneyField, PageHeader, Receipt } from '../../../ui/components.tsx'
+import { errorBanner, fieldGrid, fieldWide, ghostAction, labelStyle, primaryAction } from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
 import { SITTING_KEY, type Sitting } from '../sitting.ts'
@@ -170,66 +162,61 @@ function AddFlipPage(handle: {
 
     return (
       <AppShell title="Add Flip" identity={identity} csrf={csrf} hideNav>
-        <h1 mix={heading}>Add a Flip</h1>
-        <p mix={lead}>
-          Name and Item cost are required. Flip notes and Tags are skippable. Stay until you leave.
-        </p>
+        <PageHeader
+          title="Add a Flip"
+          lead="Name and Item cost are required. Flip notes and Tags are skippable. Stay until you leave."
+        />
         {error ? <p mix={errorBanner}>{error}</p> : null}
-        <form method="post" action={action} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          <label mix={labelStyle}>
-            Flip name
-            <input
-              type="text"
-              name="name"
-              required
-              defaultValue={values?.name ?? ''}
-              autoComplete="off"
-            />
-          </label>
-          <label mix={labelStyle}>
-            Item cost
-            <input
-              type="text"
-              inputMode="decimal"
+        <Receipt>
+          <form method="post" action={action} mix={fieldGrid}>
+            <input type="hidden" name="_csrf" value={csrf} />
+            <label mix={[labelStyle, fieldWide]}>
+              Flip name
+              <input
+                type="text"
+                name="name"
+                required
+                defaultValue={values?.name ?? ''}
+                autoComplete="off"
+              />
+            </label>
+            <MoneyField
+              label="Item cost"
               name="item_cost"
               required
               defaultValue={values?.itemCost}
             />
-          </label>
-          <label mix={labelStyle}>
-            Flip notes
-            <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
-          </label>
-          <label mix={labelStyle}>
-            Tag
-            <input
-              type="text"
-              name="tag"
-              list="tag-names"
-              autoComplete="off"
-              defaultValue={values?.tag ?? ''}
-            />
-          </label>
-          <datalist id="tag-names">
-            {bookTags.map((tag) => (
-              <option key={tag.id} value={tag.name}></option>
-            ))}
-          </datalist>
-          {identity.inspecting ? null : (
-            <button type="submit" mix={primaryAction}>
-              Save Flip
-            </button>
-          )}
-        </form>
-        <p mix={leaveRow}>
-          <a
-            href={routes.acquisitions.show.href({ acquisitionId })}
-            mix={ghostAction}
-          >
-            Leave
-          </a>
-        </p>
+            <label mix={labelStyle}>
+              Tag
+              <input
+                type="text"
+                name="tag"
+                list="tag-names"
+                autoComplete="off"
+                defaultValue={values?.tag ?? ''}
+              />
+            </label>
+            <label mix={[labelStyle, fieldWide]}>
+              Flip notes
+              <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
+            </label>
+            <datalist id="tag-names">
+              {bookTags.map((tag) => (
+                <option key={tag.id} value={tag.name}></option>
+              ))}
+            </datalist>
+            <ActionStack>
+              {identity.inspecting ? null : (
+                <button type="submit" mix={primaryAction}>
+                  Save Flip
+                </button>
+              )}
+              <a href={routes.acquisitions.show.href({ acquisitionId })} mix={ghostAction}>
+                Leave
+              </a>
+            </ActionStack>
+          </form>
+        </Receipt>
       </AppShell>
     )
   }

@@ -9,19 +9,27 @@ import type { OperatorIdentity } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
 import {
+  LedgerCell,
+  Money,
+  MoneyField,
+  PageHeader,
+  Receipt,
+  SectionLabel,
+} from '../../../ui/components.tsx'
+import {
   errorBanner,
   fieldStack,
   ghostAction,
-  heading,
-  inventoryItem,
-  inventoryList,
   labelStyle,
-  lead,
+  ledgerList,
+  ledgerRow,
   leaveRow,
   primaryAction,
+  rowMain,
+  splitLayout,
+  stackGap,
 } from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
-import { formatCents } from '../../../utils/cents.ts'
 import {
   flipIdsFromRequest,
   parseListingForm,
@@ -118,45 +126,52 @@ function NewListingPage(handle: {
 
     return (
       <AppShell title="Listing" identity={identity} csrf={csrf} current="listings">
-        <h1 mix={heading}>Listing</h1>
-        <p mix={lead}>The Flip set is fixed at save.</p>
-        {error ? <p mix={errorBanner}>{error}</p> : null}
-        <ul mix={inventoryList}>
-          {kit.map((row) => (
-            <li key={row.flip.id} mix={inventoryItem}>
-              {row.flip.name} — Acquisition cost {formatCents(row.acquisitionCostCents)}
-            </li>
-          ))}
-        </ul>
-        <form method="post" action={routes.listings.new.action.href()} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          {kit.map((row) => (
-            <input key={row.flip.id} type="hidden" name="flip" value={row.flip.id} />
-          ))}
-          <label mix={labelStyle}>
-            Listing spend
-            <input
-              type="text"
-              inputMode="decimal"
-              name="listing_spend"
-              defaultValue={values?.listingSpend ?? '0'}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Notes
-            <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
-          </label>
-          {identity.inspecting ? null : (
-            <button type="submit" mix={primaryAction}>
-              Save Listing
-            </button>
-          )}
-        </form>
-        <p mix={leaveRow}>
-          <a href={routes.inventory.href()} mix={ghostAction}>
-            Inventory
-          </a>
-        </p>
+        <PageHeader title="Listing" lead="The Flip set is fixed at save." />
+        <div mix={splitLayout}>
+          <div mix={stackGap}>
+            <SectionLabel>The Kit</SectionLabel>
+            <ul mix={ledgerList}>
+              {kit.map((row) => (
+                <li key={row.flip.id} mix={ledgerRow}>
+                  <span mix={rowMain}>
+                    <span>{row.flip.name}</span>
+                    <LedgerCell label="Acquisition cost" numeric>
+                      <Money cents={row.acquisitionCostCents} tone="flat" />
+                    </LedgerCell>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <Receipt>
+            {error ? <p mix={errorBanner}>{error}</p> : null}
+            <form method="post" action={routes.listings.new.action.href()} mix={fieldStack}>
+              <input type="hidden" name="_csrf" value={csrf} />
+              {kit.map((row) => (
+                <input key={row.flip.id} type="hidden" name="flip" value={row.flip.id} />
+              ))}
+              <MoneyField
+                label="Listing spend"
+                name="listing_spend"
+                defaultValue={values?.listingSpend ?? '0'}
+              />
+              <label mix={labelStyle}>
+                Notes
+                <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
+              </label>
+              {identity.inspecting ? null : (
+                <button type="submit" mix={primaryAction}>
+                  Save Listing
+                </button>
+              )}
+            </form>
+            <p mix={leaveRow}>
+              <a href={routes.inventory.href()} mix={ghostAction}>
+                Inventory
+              </a>
+            </p>
+          </Receipt>
+        </div>
       </AppShell>
     )
   }

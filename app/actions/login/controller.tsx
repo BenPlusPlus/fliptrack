@@ -16,8 +16,21 @@ import {
 import { sessionAuthRecord } from '../../middleware/auth.ts'
 import { databaseContext } from '../../middleware/database.ts'
 import { routes } from '../../routes.ts'
+import { PageHeader, Receipt, SectionLabel } from '../../ui/components.tsx'
 import { AppShell } from '../../ui/shell.tsx'
-import { errorBanner, fieldStack, heading, labelStyle, lead, primaryAction } from '../../ui/styles.ts'
+import {
+  authBrand,
+  authBrandLead,
+  authBrandTitle,
+  authLayout,
+  authPanel,
+  dashRule,
+  errorBanner,
+  fieldStack,
+  labelStyle,
+  primaryAction,
+  receiptSunk,
+} from '../../ui/styles.ts'
 import { mustGet } from '../../utils/context.ts'
 import { hashPassword, verifyPassword } from '../../utils/password.ts'
 
@@ -151,55 +164,70 @@ function LoginPage(handle: {
 
     return (
       <AppShell title="Login">
-        <h1 mix={heading}>Sign in</h1>
-        <p mix={lead}>Email and password. Session lasts 30 days.</p>
-        {error ? <p mix={errorBanner}>{error}</p> : null}
-        <form method="post" action={routes.login.action.href()} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          <label mix={labelStyle}>
-            Email
-            <input type="email" name="email" required autoComplete="username" />
-          </label>
-          <label mix={labelStyle}>
-            Password
-            <input type="password" name="password" required autoComplete="current-password" />
-          </label>
-          <button type="submit" mix={primaryAction}>
-            Login
-          </button>
-        </form>
-        {signupOpen ? (
-          <>
-            <h2 mix={heading}>Create Operator</h2>
-            <p mix={lead}>No setup secret. This starts empty Books.</p>
-            <form method="post" action={routes.login.signup.href()} mix={fieldStack}>
-              <input type="hidden" name="_csrf" value={csrf} />
-              <label mix={labelStyle}>
-                Email
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  autoComplete="username"
-                  defaultValue={signupEmail}
-                />
-              </label>
-              <label mix={labelStyle}>
-                Password
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                />
-              </label>
-              <button type="submit" mix={primaryAction}>
-                Create Operator
-              </button>
-            </form>
-          </>
-        ) : null}
+        <div mix={authLayout}>
+          <div mix={authBrand}>
+            <p mix={authBrandTitle}>Fliptrack</p>
+            <p mix={authBrandLead}>
+              A hand-kept ledger for thrift-store flips: what you paid, what it sold for, and
+              what is still sitting in the box.
+            </p>
+          </div>
+          <div mix={authPanel}>
+            <Receipt>
+              <PageHeader title="Sign in" lead="Email and password. Session lasts 30 days." />
+              {error ? <p mix={errorBanner}>{error}</p> : null}
+              <form method="post" action={routes.login.action.href()} mix={fieldStack}>
+                <input type="hidden" name="_csrf" value={csrf} />
+                <label mix={labelStyle}>
+                  Email
+                  <input type="email" name="email" required autoComplete="username" />
+                </label>
+                <label mix={labelStyle}>
+                  Password
+                  <input type="password" name="password" required autoComplete="current-password" />
+                </label>
+                <button type="submit" mix={primaryAction}>
+                  Login
+                </button>
+              </form>
+            </Receipt>
+            {signupOpen ? (
+              <>
+                <hr mix={dashRule} />
+                <Receipt sunk>
+                  <SectionLabel>Sign-up open</SectionLabel>
+                  <PageHeader title="Create Operator" lead="No setup secret. This starts empty Books." />
+                  <form method="post" action={routes.login.signup.href()} mix={fieldStack}>
+                    <input type="hidden" name="_csrf" value={csrf} />
+                    <label mix={labelStyle}>
+                      Email
+                      <input
+                        type="email"
+                        name="email"
+                        required
+                        autoComplete="username"
+                        defaultValue={signupEmail}
+                      />
+                    </label>
+                    <label mix={labelStyle}>
+                      Password
+                      <input
+                        type="password"
+                        name="password"
+                        required
+                        minLength={8}
+                        autoComplete="new-password"
+                      />
+                    </label>
+                    <button type="submit" mix={primaryAction}>
+                      Create Operator
+                    </button>
+                  </form>
+                </Receipt>
+              </>
+            ) : null}
+          </div>
+        </div>
       </AppShell>
     )
   }

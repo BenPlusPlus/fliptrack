@@ -10,16 +10,8 @@ import type { OperatorIdentity } from '../../../middleware/auth.ts'
 import type { Acquisition } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
-import {
-  errorBanner,
-  fieldStack,
-  ghostAction,
-  heading,
-  labelStyle,
-  lead,
-  leaveRow,
-  primaryAction,
-} from '../../../ui/styles.ts'
+import { ActionStack, MoneyField, PageHeader, Receipt } from '../../../ui/components.tsx'
+import { errorBanner, fieldGrid, fieldWide, ghostAction, labelStyle, primaryAction } from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
 import { SITTING_KEY, type Sitting } from '../sitting.ts'
@@ -136,63 +128,52 @@ function ContinueAcquisitionPage(handle: {
 
     return (
       <AppShell title="Add Flips" identity={identity} csrf={csrf} hideNav>
-        <h1 mix={heading}>Add Flips to this Acquisition</h1>
-        <p mix={lead}>
-          Header Tax paid and Inbound shipping are this sitting only. They default to $0 and
-          snapshot onto the new Flips only.
-        </p>
+        <PageHeader
+          title="Add Flips to this Acquisition"
+          lead="Header Tax paid and Inbound shipping are this sitting only. They default to $0 and snapshot onto the new Flips only."
+        />
         {error ? <p mix={errorBanner}>{error}</p> : null}
-        <form method="post" action={action} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          <label mix={labelStyle}>
-            Acquisition date
-            <input
-              type="date"
-              name="acquisition_date"
-              required
-              defaultValue={values?.acquisitionDate ?? String(acquisition.acquisition_date)}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Notes
-            <textarea
-              name="notes"
-              rows={3}
-              defaultValue={values?.notes ?? acquisition.notes ?? ''}
-            ></textarea>
-          </label>
-          <label mix={labelStyle}>
-            Tax paid
-            <input
-              type="text"
-              inputMode="decimal"
-              name="tax_paid"
-              defaultValue={values?.taxPaid ?? '0'}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Inbound shipping
-            <input
-              type="text"
-              inputMode="decimal"
+        <Receipt>
+          <form method="post" action={action} mix={fieldGrid}>
+            <input type="hidden" name="_csrf" value={csrf} />
+            <label mix={[labelStyle, fieldWide]}>
+              Acquisition date
+              <input
+                type="date"
+                name="acquisition_date"
+                required
+                defaultValue={values?.acquisitionDate ?? String(acquisition.acquisition_date)}
+              />
+            </label>
+            <label mix={[labelStyle, fieldWide]}>
+              Notes
+              <textarea
+                name="notes"
+                rows={3}
+                defaultValue={values?.notes ?? acquisition.notes ?? ''}
+              ></textarea>
+            </label>
+            <MoneyField label="Tax paid" name="tax_paid" defaultValue={values?.taxPaid ?? '0'} />
+            <MoneyField
+              label="Inbound shipping"
               name="inbound_shipping"
               defaultValue={values?.inboundShipping ?? '0'}
             />
-          </label>
-          {identity.inspecting ? null : (
-            <button type="submit" mix={primaryAction}>
-              Add Flips
-            </button>
-          )}
-        </form>
-        <p mix={leaveRow}>
-          <a
-            href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}
-            mix={ghostAction}
-          >
-            Leave
-          </a>
-        </p>
+            <ActionStack>
+              {identity.inspecting ? null : (
+                <button type="submit" mix={primaryAction}>
+                  Add Flips
+                </button>
+              )}
+              <a
+                href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}
+                mix={ghostAction}
+              >
+                Leave
+              </a>
+            </ActionStack>
+          </form>
+        </Receipt>
       </AppShell>
     )
   }

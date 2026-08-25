@@ -2,6 +2,7 @@ import { completeAuth } from 'remix/auth'
 import { getCsrfToken } from 'remix/middleware/csrf'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
+import { css } from 'remix/ui'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { minLength } from 'remix/data-schema/checks'
@@ -10,7 +11,8 @@ import { operatorFrom, requireOperator, sessionAuthRecord } from '../../middlewa
 import { databaseContext } from '../../middleware/database.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
-import { errorBanner, fieldStack, heading, labelStyle, lead, primaryAction } from '../../ui/styles.ts'
+import { PageHeader, Receipt } from '../../ui/components.tsx'
+import { errorBanner, fieldStack, labelStyle, primaryAction } from '../../ui/styles.ts'
 import { mustGet } from '../../utils/context.ts'
 import { hashPassword } from '../../utils/password.ts'
 
@@ -76,26 +78,48 @@ function ForcedPasswordPage(handle: {
     let { csrf, identity, error } = handle.props
     return (
       <AppShell title="Change password" identity={identity} csrf={csrf} hideNav>
-        <h1 mix={heading}>Change your password</h1>
-        <p mix={lead}>The temporary password cannot be used after this.</p>
-        {error ? <p mix={errorBanner}>{error}</p> : null}
-        <form method="post" action={routes.password.action.href()} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          <label mix={labelStyle}>
-            New password
-            <input
-              type="password"
-              name="password"
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </label>
-          <button type="submit" mix={primaryAction}>
-            Save password
-          </button>
-        </form>
+        <div mix={interstitialCenter}>
+          <div mix={interstitialNarrow}>
+            <Receipt>
+              <PageHeader
+                title="Change your password"
+                lead="The temporary password cannot be used after this."
+              />
+              {error ? <p mix={errorBanner}>{error}</p> : null}
+              <form method="post" action={routes.password.action.href()} mix={fieldStack}>
+                <input type="hidden" name="_csrf" value={csrf} />
+                <label mix={labelStyle}>
+                  New password
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    minLength={8}
+                    autoComplete="new-password"
+                  />
+                </label>
+                <button type="submit" mix={primaryAction}>
+                  Save password
+                </button>
+              </form>
+            </Receipt>
+          </div>
+        </div>
       </AppShell>
     )
   }
 }
+
+/* No sidebar on this interstitial (`hideNav`), so a single narrow Receipt is
+ * centred by hand rather than reusing the two-column `authLayout`. */
+const interstitialCenter = css({
+  display: 'grid',
+  justifyItems: 'center',
+  alignContent: 'center',
+  minHeight: 'calc(100vh - 9rem)',
+})
+
+const interstitialNarrow = css({
+  width: '100%',
+  maxWidth: '26rem',
+})
