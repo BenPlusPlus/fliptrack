@@ -1,3 +1,4 @@
+import { css } from 'remix/ui'
 import { getCsrfToken } from 'remix/middleware/csrf'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
@@ -20,19 +21,63 @@ import {
 import { databaseContext } from '../../middleware/database.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
+import { LedgerCell, PageHeader, Receipt, SectionLabel, Stamp, Subheading } from '../../ui/components.tsx'
 import {
-  fieldStack,
+  FONT_MONEY,
   ghostAction,
-  heading,
-  inventoryItem,
-  inventoryList,
   labelStyle,
+  ledgerHead,
+  ledgerTable,
+  ledgerTableRow,
   lead,
+  leaveRow,
   mutedNote,
-  tagSection,
+  quietAction,
+  revealStagger,
+  stackGap,
 } from '../../ui/styles.ts'
 import { mustGet } from '../../utils/context.ts'
 import { generateTempPassword, hashPassword } from '../../utils/password.ts'
+
+/* Shared column template so the head row and each operator row line up on
+ * desktop: Operator takes the remaining space, Role and Actions are fixed. */
+const operatorColumns = css({
+  '@media (min-width: 48rem)': { gridTemplateColumns: 'minmax(0, 1fr) 10rem 20rem' },
+})
+
+/* An email is an identifier, not a headline: it reads better in the money mono
+ * than in the wonky display face. */
+const operatorName = css({
+  fontFamily: FONT_MONEY,
+  fontSize: '0.86rem',
+  fontWeight: 600,
+  letterSpacing: '0.01em',
+  color: 'var(--ink)',
+  overflowWrap: 'anywhere',
+  margin: 0,
+})
+
+const signupHeaderRow = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '0.75rem',
+  flexWrap: 'wrap',
+})
+
+const tempPasswordValue = css({
+  fontFamily: FONT_MONEY,
+  fontSize: '1.1rem',
+  letterSpacing: '0.02em',
+})
+
+const operatorActions = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '0.5rem',
+  '& form': { display: 'contents' },
+  '@media (min-width: 48rem)': { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' },
+})
 
 type RevealedTempPassword = { email: string; password: string }
 
@@ -139,71 +184,101 @@ function AdminPage(handle: {
 
     return (
       <AppShell title="Admin" identity={identity} csrf={csrf} current="admin">
-        <h1 mix={heading}>Admin</h1>
-        <p mix={lead}>Sign-up is {signupOpen ? 'open' : 'closed'}.</p>
-        {readOnly ? null : (
-          <form method="post" action={routes.admin.signup.href()}>
-            <input type="hidden" name="_csrf" value={csrf} />
-            <input type="hidden" name="signup_open" value={signupOpen ? '0' : '1'} />
-            <button type="submit" mix={ghostAction}>
-              {signupOpen ? 'Close sign-up' : 'Open sign-up'}
-            </button>
-          </form>
-        )}
-        {revealed ? (
-          <section mix={tagSection}>
-            <p mix={lead}>
-              Temporary password for {revealed.email}. Copy it now; it is shown once and never
-              mailed.
-            </p>
-            <label mix={labelStyle}>
-              Temporary password
-              <input id="temp-password" type="text" readOnly value={revealed.password} />
-            </label>
-            <p>
-              <button type="button" mix={ghostAction} id="copy-temp-password">
-                Copy
-              </button>
-            </p>
-            <script>
-              {`(function(){var i=document.getElementById('temp-password');var b=document.getElementById('copy-temp-password');if(!i||!b)return;b.addEventListener('click',function(){i.focus();i.select();if(navigator.clipboard)navigator.clipboard.writeText(i.value);});})();`}
-            </script>
-          </section>
-        ) : null}
-        <section mix={tagSection}>
-          <h2 mix={heading}>Operators</h2>
-          <ul mix={inventoryList}>
-            {operators.map((operator) => (
-              <li key={operator.id} mix={inventoryItem}>
-                <p>{operator.email}</p>
-                {operator.id === identity.id ? (
-                  <p mix={mutedNote}>Instance admin</p>
-                ) : readOnly ? null : (
-                  <div mix={fieldStack}>
-                    <form
-                      method="post"
-                      action={routes.admin.inspect.href({ operatorId: operator.id })}
-                    >
-                      <input type="hidden" name="_csrf" value={csrf} />
-                      <button type="submit" mix={ghostAction}>
-                        Inspect
-                      </button>
-                    </form>
-                    <form
-                      method="post"
-                      action={routes.admin.tempPassword.href({ operatorId: operator.id })}
-                    >
-                      <input type="hidden" name="_csrf" value={csrf} />
-                      <button type="submit" mix={ghostAction}>
-                        Set temporary password
-                      </button>
-                    </form>
-                  </div>
-                )}
+        <PageHeader title="Admin" />
+        <div mix={stackGap}>
+          <Receipt>
+            <div mix={signupHeaderRow}>
+              <Subheading>Sign-up</Subheading>
+              <Stamp tone={signupOpen ? 'gold' : 'neutral'}>{signupOpen ? 'Open' : 'Closed'}</Stamp>
+            </div>
+            <p mix={lead}>Sign-up is {signupOpen ? 'open' : 'closed'}.</p>
+            {readOnly ? null : (
+              <form method="post" action={routes.admin.signup.href()} mix={leaveRow}>
+                <input type="hidden" name="_csrf" value={csrf} />
+                <input type="hidden" name="signup_open" value={signupOpen ? '0' : '1'} />
+                <button type="submit" mix={ghostAction}>
+                  {signupOpen ? 'Close sign-up' : 'Open sign-up'}
+                </button>
+              </form>
+            )}
+          </Receipt>
+          {revealed ? (
+            <Receipt sunk>
+              <SectionLabel>One-time secret</SectionLabel>
+              <Subheading>Temporary password for {revealed.email}</Subheading>
+              <p mix={mutedNote}>Copy it now; it is shown once and never mailed.</p>
+              <label mix={labelStyle}>
+                Temporary password
+                <input
+                  id="temp-password"
+                  type="text"
+                  readOnly
+                  value={revealed.password}
+                  mix={tempPasswordValue}
+                />
+              </label>
+              <p mix={leaveRow}>
+                <button type="button" mix={ghostAction} id="copy-temp-password">
+                  Copy
+                </button>
+              </p>
+              <script>
+                {`(function(){var i=document.getElementById('temp-password');var b=document.getElementById('copy-temp-password');if(!i||!b)return;b.addEventListener('click',function(){i.focus();i.select();if(navigator.clipboard)navigator.clipboard.writeText(i.value);});})();`}
+              </script>
+            </Receipt>
+          ) : null}
+          <section>
+            <Subheading>Operators</Subheading>
+            <ol mix={[ledgerTable, revealStagger]}>
+              <li mix={[ledgerHead, operatorColumns]} aria-hidden="true">
+                <span>Operator</span>
+                <span>Role</span>
+                <span>Actions</span>
               </li>
-            ))}
-          </ul>
-        </section>
+              {operators.map((operator) => {
+                let isSelf = operator.id === identity.id
+                return (
+                  <li key={operator.id} mix={[ledgerTableRow, operatorColumns]}>
+                    <LedgerCell label="Operator">
+                      <span mix={operatorName}>{operator.email}</span>
+                    </LedgerCell>
+                    <LedgerCell label="Role">
+                      {operator.instanceAdmin ? (
+                        <Stamp tone="gold">Instance admin</Stamp>
+                      ) : (
+                        <span mix={mutedNote}>Operator</span>
+                      )}
+                    </LedgerCell>
+                    <LedgerCell label={isSelf || readOnly ? '' : 'Actions'}>
+                      {isSelf || readOnly ? null : (
+                        <div mix={operatorActions}>
+                          <form
+                            method="post"
+                            action={routes.admin.inspect.href({ operatorId: operator.id })}
+                          >
+                            <input type="hidden" name="_csrf" value={csrf} />
+                            <button type="submit" mix={ghostAction}>
+                              Inspect
+                            </button>
+                          </form>
+                          <form
+                            method="post"
+                            action={routes.admin.tempPassword.href({ operatorId: operator.id })}
+                          >
+                            <input type="hidden" name="_csrf" value={csrf} />
+                            <button type="submit" mix={quietAction}>
+                              Set temporary password
+                            </button>
+                          </form>
+                        </div>
+                      )}
+                    </LedgerCell>
+                  </li>
+                )
+              })}
+            </ol>
+          </section>
+        </div>
       </AppShell>
     )
   }

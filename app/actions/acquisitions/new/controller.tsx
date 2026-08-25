@@ -9,16 +9,8 @@ import { operatorFrom, requireOperator } from '../../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
-import {
-  errorBanner,
-  fieldStack,
-  ghostAction,
-  heading,
-  labelStyle,
-  lead,
-  leaveRow,
-  primaryAction,
-} from '../../../ui/styles.ts'
+import { ActionStack, MoneyField, PageHeader, Receipt } from '../../../ui/components.tsx'
+import { errorBanner, fieldGrid, fieldWide, ghostAction, labelStyle, primaryAction } from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
 import { SITTING_KEY, type Sitting } from '../sitting.ts'
@@ -109,56 +101,46 @@ function NewAcquisitionPage(handle: {
 
     return (
       <AppShell title="New Acquisition" identity={identity} csrf={csrf} hideNav>
-        <h1 mix={heading}>New Acquisition</h1>
-        <p mix={lead}>
-          Date defaults to today. Change it for opening stock. Then add Flips one at a time.
-        </p>
+        <PageHeader
+          title="New Acquisition"
+          lead="Date defaults to today. Change it for opening stock. Then add Flips one at a time."
+        />
         {error ? <p mix={errorBanner}>{error}</p> : null}
-        <form method="post" action={routes.acquisitions.new.action.href()} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          <label mix={labelStyle}>
-            Acquisition date
-            <input
-              id="acquisition_date"
-              type="date"
-              name="acquisition_date"
-              required
-              defaultValue={values?.acquisitionDate ?? ''}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Notes
-            <textarea name="notes" rows={3}></textarea>
-          </label>
-          <label mix={labelStyle}>
-            Tax paid
-            <input
-              type="text"
-              inputMode="decimal"
-              name="tax_paid"
-              defaultValue={values?.taxPaid ?? '0'}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Inbound shipping
-            <input
-              type="text"
-              inputMode="decimal"
+        <Receipt>
+          <form method="post" action={routes.acquisitions.new.action.href()} mix={fieldGrid}>
+            <input type="hidden" name="_csrf" value={csrf} />
+            <label mix={[labelStyle, fieldWide]}>
+              Acquisition date
+              <input
+                id="acquisition_date"
+                type="date"
+                name="acquisition_date"
+                required
+                defaultValue={values?.acquisitionDate ?? ''}
+              />
+            </label>
+            <label mix={[labelStyle, fieldWide]}>
+              Notes
+              <textarea name="notes" rows={3}></textarea>
+            </label>
+            <MoneyField label="Tax paid" name="tax_paid" defaultValue={values?.taxPaid ?? '0'} />
+            <MoneyField
+              label="Inbound shipping"
               name="inbound_shipping"
               defaultValue={values?.inboundShipping ?? '0'}
             />
-          </label>
-          {identity.inspecting ? null : (
-            <button type="submit" mix={primaryAction}>
-              Add Flips
-            </button>
-          )}
-        </form>
-        <p mix={leaveRow}>
-          <a href={routes.home.href()} mix={ghostAction}>
-            Leave
-          </a>
-        </p>
+            <ActionStack>
+              {identity.inspecting ? null : (
+                <button type="submit" mix={primaryAction}>
+                  Add Flips
+                </button>
+              )}
+              <a href={routes.home.href()} mix={ghostAction}>
+                Leave
+              </a>
+            </ActionStack>
+          </form>
+        </Receipt>
         <script>
           {`(function(){var i=document.getElementById('acquisition_date');if(!i||i.value)return;var d=new Date();var m=String(d.getMonth()+1).padStart(2,'0');var day=String(d.getDate()).padStart(2,'0');i.value=d.getFullYear()+'-'+m+'-'+day;})();`}
         </script>

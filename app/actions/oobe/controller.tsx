@@ -16,7 +16,18 @@ import { appConfigContext } from '../../middleware/config.ts'
 import { sessionAuthRecord } from '../../middleware/auth.ts'
 import { databaseContext } from '../../middleware/database.ts'
 import { routes } from '../../routes.ts'
-import { errorBanner, fieldStack, heading, labelStyle, lead, primaryAction } from '../../ui/styles.ts'
+import { PageHeader, Receipt, Stamp } from '../../ui/components.tsx'
+import {
+  authBrand,
+  authBrandLead,
+  authBrandTitle,
+  authLayout,
+  authPanel,
+  errorBanner,
+  fieldStack,
+  labelStyle,
+  primaryAction,
+} from '../../ui/styles.ts'
 import { AppShell } from '../../ui/shell.tsx'
 import { mustGet } from '../../utils/context.ts'
 import { hashPassword } from '../../utils/password.ts'
@@ -138,41 +149,62 @@ function OobePage(handle: {
 
     return (
       <AppShell title={firstRun ? 'First run' : 'Break-glass'}>
-        <h1 mix={heading}>
-          {firstRun ? 'Create the instance-admin Operator' : 'Set a new standing password'}
-        </h1>
-        <p mix={lead}>
-          {firstRun
-            ? 'Gated by the setup secret. This creates empty Books.'
-            : 'Gated by the setup secret. This does not create a second Operator.'}
-        </p>
-        {error ? <p mix={errorBanner}>{error}</p> : null}
-        <form method="post" action={routes.oobe.action.href()} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          <label mix={labelStyle}>
-            Setup secret
-            <input type="password" name="setup_secret" required autoComplete="off" />
-          </label>
-          {firstRun ? (
-            <label mix={labelStyle}>
-              Email
-              <input type="email" name="email" required autoComplete="username" defaultValue={email} />
-            </label>
-          ) : null}
-          <label mix={labelStyle}>
-            Password
-            <input
-              type="password"
-              name="password"
-              required
-              minLength={8}
-              autoComplete={firstRun ? 'new-password' : 'new-password'}
-            />
-          </label>
-          <button type="submit" mix={primaryAction}>
-            {firstRun ? 'Create Operator' : 'Set password'}
-          </button>
-        </form>
+        <div mix={authLayout}>
+          <div mix={authBrand}>
+            <p mix={authBrandTitle}>Fliptrack</p>
+            <p mix={authBrandLead}>
+              {firstRun
+                ? 'Set up the instance-admin Operator to start keeping Books.'
+                : 'Reset the standing password for the instance-admin Operator.'}
+            </p>
+          </div>
+          <div mix={authPanel}>
+            <Receipt>
+              <PageHeader
+                title={firstRun ? 'Create the instance-admin Operator' : 'Set a new standing password'}
+                lead={
+                  firstRun
+                    ? 'Gated by the setup secret. This creates empty Books.'
+                    : 'Gated by the setup secret. This does not create a second Operator.'
+                }
+                aside={firstRun ? <Stamp tone="gold">First run</Stamp> : null}
+              />
+              {error ? <p mix={errorBanner}>{error}</p> : null}
+              <form method="post" action={routes.oobe.action.href()} mix={fieldStack}>
+                <input type="hidden" name="_csrf" value={csrf} />
+                <label mix={labelStyle}>
+                  Setup secret
+                  <input type="password" name="setup_secret" required autoComplete="off" />
+                </label>
+                {firstRun ? (
+                  <label mix={labelStyle}>
+                    Email
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      autoComplete="username"
+                      defaultValue={email}
+                    />
+                  </label>
+                ) : null}
+                <label mix={labelStyle}>
+                  Password
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    minLength={8}
+                    autoComplete={firstRun ? 'new-password' : 'new-password'}
+                  />
+                </label>
+                <button type="submit" mix={primaryAction}>
+                  {firstRun ? 'Create Operator' : 'Set password'}
+                </button>
+              </form>
+            </Receipt>
+          </div>
+        </div>
       </AppShell>
     )
   }

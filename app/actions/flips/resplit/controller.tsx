@@ -15,17 +15,17 @@ import type { OperatorIdentity } from '../../../middleware/auth.ts'
 import type { Flip } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
+import { MoneyField, PageHeader, Stamp } from '../../../ui/components.tsx'
 import {
+  FONT_MONEY,
   errorBanner,
-  fieldStack,
   ghostAction,
-  heading,
   labelStyle,
-  lead,
   leaveRow,
-  mutedNote,
   primaryAction,
+  receipt,
 } from '../../../ui/styles.ts'
+import { css } from 'remix/ui'
 import { mustGet } from '../../../utils/context.ts'
 import { allocateShares, formatCents, parseCents } from '../../../utils/cents.ts'
 
@@ -172,48 +172,54 @@ function ResplitPage(handle: {
 
     return (
       <AppShell title="Re-split" identity={identity} csrf={csrf} current="inventory">
-        <h1 mix={heading}>Re-split {parent.name}</h1>
-        <p mix={lead}>
-          Child Item costs must sum to {formatCents(parent.item_cost)}. Resulting Acquisition costs
-          are shown before save.
-        </p>
+        <PageHeader
+          title={`Re-split ${parent.name}`}
+          lead={`Child Item costs must sum to ${formatCents(parent.item_cost)}. Resulting Acquisition costs are shown before save.`}
+          aside={<Stamp tone="gold">Re-split</Stamp>}
+        />
         {error ? <p mix={errorBanner}>{error}</p> : null}
         <form
           method="post"
           action={routes.flips.resplit.action.href({ flipId: parent.id })}
-          mix={fieldStack}
+          mix={resplitForm}
           id="resplit-form"
           data-item={String(parent.item_cost)}
           data-tax={String(parent.tax_paid)}
           data-inbound={String(parent.inbound_shipping)}
         >
           <input type="hidden" name="_csrf" value={csrf} />
-          {rows.map((row, index) => (
-            <fieldset key={index} mix={fieldStack}>
-              <legend mix={labelStyle}>Child {index + 1}</legend>
-              <label mix={labelStyle}>
-                Flip name
-                <input
-                  type="text"
-                  name={`child_name.${index}`}
-                  defaultValue={row.name}
-                  autoComplete="off"
-                />
-              </label>
-              <label mix={labelStyle}>
-                Item cost
-                <input
-                  type="text"
-                  inputMode="decimal"
+          <div mix={childGrid}>
+            {rows.map((row, index) => (
+              <fieldset key={index} mix={[receipt, childCard]}>
+                <legend mix={childLegend}>Child {index + 1}</legend>
+                <label mix={labelStyle}>
+                  Flip name
+                  <input
+                    type="text"
+                    name={`child_name.${index}`}
+                    defaultValue={row.name}
+                    autoComplete="off"
+                    placeholder="Name this piece"
+                  />
+                </label>
+                <MoneyField
+                  label="Item cost"
                   name={`child_item_cost.${index}`}
                   defaultValue={row.itemCost}
                 />
-              </label>
-              <p mix={mutedNote} data-preview>
-                Acquisition cost {preview[index] ?? '—'}
-              </p>
-            </fieldset>
-          ))}
+                <p mix={previewLine} data-preview>
+                  Acquisition cost {preview[index] ?? '—'}
+                </p>
+              </fieldset>
+            ))}
+          </div>
+          <div mix={[receipt, tallyStrip]}>
+            <span mix={tallyLabel}>Allocated</span>
+            <span mix={tallyValue} data-sum>
+              {formatCents(0)}
+            </span>
+            <span mix={tallyTarget}>of {formatCents(parent.item_cost)}</span>
+          </div>
           {identity.inspecting ? null : (
             <button type="submit" mix={primaryAction}>
               Save Re-split
@@ -226,7 +232,7 @@ function ResplitPage(handle: {
           </a>
         </p>
         <script>
-          {`(function(){var form=document.getElementById('resplit-form');if(!form)return;function cents(raw){raw=String(raw||'').trim();if(!raw)return null;if(raw.charAt(0)==='-')return null;if(!/^\\d+(\\.\\d{1,2})?$/.test(raw))return null;var p=raw.split('.');return Number(p[0])*100+Number(((p[1]||'')+'00').slice(0,2));}function fmt(c){if(c===0)return'$0';var d=Math.floor(c/100),r=c%100;return'$'+d+'.'+String(r).padStart(2,'0');}function shares(total,weights){if(!weights.length)return[];var sum=weights.reduce(function(a,b){return a+b;},0);var out;if(sum===0){var base=Math.floor(total/weights.length);out=weights.map(function(){return base;});out[out.length-1]+=total-base*weights.length;return out;}out=weights.map(function(w){return Math.floor(total*w/sum);});out[out.length-1]+=total-out.reduce(function(a,b){return a+b;},0);return out;}function paint(){var item=Number(form.getAttribute('data-item')||'0');var tax=Number(form.getAttribute('data-tax')||'0');var inbound=Number(form.getAttribute('data-inbound')||'0');var names=form.querySelectorAll('input[name^="child_name."]');var costs=form.querySelectorAll('input[name^="child_item_cost."]');var previews=form.querySelectorAll('[data-preview]');var parsed=[];for(var i=0;i<costs.length;i++){parsed.push(cents(costs[i].value));}var filled=parsed.filter(function(v){return v!=null;});var taxShares=shares(tax,parsed.map(function(v){return v||0;}));var shipShares=shares(inbound,parsed.map(function(v){return v||0;}));for(var j=0;j<previews.length;j++){var c=parsed[j];if(c==null){previews[j].textContent='Acquisition cost —';continue;}previews[j].textContent='Acquisition cost '+fmt(c+taxShares[j]+shipShares[j]);}void names;void filled;void item;}form.addEventListener('input',paint);paint();})();`}
+          {`(function(){var form=document.getElementById('resplit-form');if(!form)return;function cents(raw){raw=String(raw||'').trim();if(!raw)return null;if(raw.charAt(0)==='-')return null;if(!/^\\d+(\\.\\d{1,2})?$/.test(raw))return null;var p=raw.split('.');return Number(p[0])*100+Number(((p[1]||'')+'00').slice(0,2));}function fmt(c){if(c===0)return'$0';var d=Math.floor(c/100),r=c%100;return'$'+d+'.'+String(r).padStart(2,'0');}function shares(total,weights){if(!weights.length)return[];var sum=weights.reduce(function(a,b){return a+b;},0);var out;if(sum===0){var base=Math.floor(total/weights.length);out=weights.map(function(){return base;});out[out.length-1]+=total-base*weights.length;return out;}out=weights.map(function(w){return Math.floor(total*w/sum);});out[out.length-1]+=total-out.reduce(function(a,b){return a+b;},0);return out;}function paint(){var item=Number(form.getAttribute('data-item')||'0');var tax=Number(form.getAttribute('data-tax')||'0');var inbound=Number(form.getAttribute('data-inbound')||'0');var names=form.querySelectorAll('input[name^="child_name."]');var costs=form.querySelectorAll('input[name^="child_item_cost."]');var previews=form.querySelectorAll('[data-preview]');var parsed=[];for(var i=0;i<costs.length;i++){parsed.push(cents(costs[i].value));}var filled=parsed.filter(function(v){return v!=null;});var taxShares=shares(tax,parsed.map(function(v){return v||0;}));var shipShares=shares(inbound,parsed.map(function(v){return v||0;}));for(var j=0;j<previews.length;j++){var c=parsed[j];if(c==null){previews[j].textContent='Acquisition cost —';continue;}previews[j].textContent='Acquisition cost '+fmt(c+taxShares[j]+shipShares[j]);}var sumEl=form.querySelector('[data-sum]');if(sumEl){var tot=0;for(var k=0;k<parsed.length;k++){if(parsed[k]!=null)tot+=parsed[k];}sumEl.textContent=fmt(tot);sumEl.setAttribute('data-balanced',tot===item?'1':'0');}void names;void filled;void item;}form.addEventListener('input',paint);paint();})();`}
         </script>
       </AppShell>
     )
@@ -258,3 +264,78 @@ function childPreviews(parent: Flip, rows: { name: string; itemCost: string }[])
   })
   return labels
 }
+
+/* ------------------------------- local styles ----------------------------- */
+
+const resplitForm = css({ display: 'grid', gap: '1rem' })
+
+/* Children are siblings of equal weight, so they get equal cards rather than
+ * a stack: two up from 40rem, three up once the sidebar has appeared. */
+const childGrid = css({
+  display: 'grid',
+  gap: '0.85rem',
+  gridTemplateColumns: 'repeat(auto-fill, minmax(15rem, 1fr))',
+})
+
+const childCard = css({
+  display: 'grid',
+  gap: '0.7rem',
+  padding: '0.95rem 1rem 1rem',
+  border: '1px solid var(--rule)',
+  minWidth: 0,
+})
+
+const childLegend = css({
+  padding: '0 0.4rem',
+  marginLeft: '-0.4rem',
+  fontSize: '0.68rem',
+  fontWeight: 700,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase',
+  color: 'var(--stamp)',
+})
+
+const previewLine = css({
+  margin: 0,
+  paddingTop: '0.5rem',
+  borderTop: '1px dashed var(--rule)',
+  fontFamily: FONT_MONEY,
+  fontSize: '0.74rem',
+  letterSpacing: '0.02em',
+  color: 'var(--muted)',
+})
+
+/* The tally reads like the total line at the foot of a receipt. It turns green
+ * only when the children exactly account for the parent Item cost. */
+const tallyStrip = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignItems: 'baseline',
+  gap: '0.5rem',
+  padding: '0.75rem 1rem',
+  borderTop: '2px solid var(--ink)',
+  '& [data-balanced="1"]': { color: 'var(--gain)' },
+})
+
+const tallyLabel = css({
+  fontSize: '0.68rem',
+  fontWeight: 700,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase',
+  color: 'var(--muted)',
+  marginRight: 'auto',
+})
+
+const tallyValue = css({
+  fontFamily: FONT_MONEY,
+  fontSize: '1.15rem',
+  fontWeight: 600,
+  fontVariantNumeric: 'tabular-nums',
+  color: 'var(--ink)',
+})
+
+const tallyTarget = css({
+  fontFamily: FONT_MONEY,
+  fontSize: '0.78rem',
+  color: 'var(--muted)',
+})

@@ -16,19 +16,25 @@ import type { StandingRealizingOnFlip, UndoneEventOnFlip } from '../../data/quer
 import type { Acquisition, Flip, Tag } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
+import { ActionStack, MoneyField, PageHeader, SectionLabel, Stamp } from '../../ui/components.tsx'
 import {
+  FONT_MONEY,
+  dangerAction,
   errorBanner,
-  fieldStack,
+  fieldGrid,
+  fieldWide,
   ghostAction,
-  heading,
   labelStyle,
-  leaveRow,
   mutedNote,
   primaryAction,
-  tagChip,
-  tagList,
+  priceTag,
+  receipt,
+
+  stackGap,
+  tagRail,
   tagSection,
 } from '../../ui/styles.ts'
+import { css } from 'remix/ui'
 import { mustGet } from '../../utils/context.ts'
 import { centsToInput, formatCents, parseCents } from '../../utils/cents.ts'
 
@@ -252,226 +258,343 @@ function FlipHubPage(handle: {
     } = handle.props
     let readOnly = identity.inspecting != null
 
+
+    let standingProfit =
+      standing?.kind === 'sale'
+        ? { cents: standing.profitCents, label: 'Sale', href: routes.sales.show.href({ saleId: standing.sale.id }) }
+        : standing?.kind === 'write-off'
+          ? {
+              cents: standing.profitCents,
+              label: 'Write-off',
+              href: routes.writeOffs.show.href({ writeOffId: standing.writeOff.id }),
+            }
+          : null
+
     return (
       <AppShell title={flip.name} identity={identity} csrf={csrf} current="inventory">
-        <h1 mix={heading}>{values?.name ?? flip.name}</h1>
-        {flip.retired ? <p mix={mutedNote}>Retired</p> : null}
-        {parent ? (
-          <p mix={mutedNote}>
-            Re-split from{' '}
-            <a href={routes.flips.show.href({ flipId: parent.id })}>{parent.name}</a>
-          </p>
-        ) : null}
-        {standing?.kind === 'sale' ? (
-          <p mix={mutedNote}>
-            Profit {formatCents(standing.profitCents)}
-            {' · '}
-            <a href={routes.sales.show.href({ saleId: standing.sale.id })}>Sale</a>
-          </p>
-        ) : null}
-        {standing?.kind === 'write-off' ? (
-          <p mix={mutedNote}>
-            Profit {formatCents(standing.profitCents)}
-            {' · '}
-            <a href={routes.writeOffs.show.href({ writeOffId: standing.writeOff.id })}>Write-off</a>
-          </p>
-        ) : null}
-        {isInventory && hitchCents > 0 ? (
-          <p mix={mutedNote}>
-            {formatCents(hitchCents)} will count on the next Sale or Write-off
-          </p>
-        ) : null}
-        {undoneEvents.map((event) =>
-          event.kind === 'sale' ? (
-            <p mix={mutedNote} key={`sale-${event.saleId}`}>
-              Undone Sale
-              {' · '}
-              <a href={routes.sales.show.href({ saleId: event.saleId })}>Sale</a>
-            </p>
-          ) : (
-            <p mix={mutedNote} key={`write-off-${event.writeOffId}`}>
-              Undone Write-off
-              {' · '}
-              <a href={routes.writeOffs.show.href({ writeOffId: event.writeOffId })}>Write-off</a>
-            </p>
-          ),
-        )}
+        <PageHeader
+          title={values?.name ?? flip.name}
+          aside={
+            <>
+              {flip.retired ? <Stamp tone="neutral">Retired</Stamp> : null}
+              {standing?.kind === 'sale' ? <Stamp tone="gain">SOLD</Stamp> : null}
+              {standing?.kind === 'write-off' ? <Stamp tone="loss">WRITTEN-OFF</Stamp> : null}
+            </>
+          }
+        />
+
         {error ? <p mix={errorBanner}>{error}</p> : null}
-        <form method="post" action={routes.flips.update.href({ flipId: flip.id })} mix={fieldStack}>
-          <input type="hidden" name="_csrf" value={csrf} />
-          <label mix={labelStyle}>
-            Flip name
-            <input
-              type="text"
-              name="name"
-              required
-              defaultValue={values?.name ?? flip.name}
-              autoComplete="off"
-              readOnly={readOnly}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Notes
-            <textarea
-              name="notes"
-              rows={3}
-              defaultValue={values?.notes ?? flip.notes ?? ''}
-              readOnly={readOnly}
-            ></textarea>
-          </label>
-          <label mix={labelStyle}>
-            Item cost
-            <input
-              type="text"
-              inputMode="decimal"
-              name="item_cost"
-              required
-              defaultValue={values?.itemCost ?? centsToInput(flip.item_cost)}
-              readOnly={inboundFrozen || readOnly}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Tax paid
-            <input
-              type="text"
-              inputMode="decimal"
-              name="tax_paid"
-              defaultValue={values?.taxPaid ?? centsToInput(flip.tax_paid)}
-              readOnly={inboundFrozen || readOnly}
-            />
-          </label>
-          <label mix={labelStyle}>
-            Inbound shipping
-            <input
-              type="text"
-              inputMode="decimal"
-              name="inbound_shipping"
-              defaultValue={values?.inboundShipping ?? centsToInput(flip.inbound_shipping)}
-              readOnly={inboundFrozen || readOnly}
-            />
-          </label>
-          {readOnly ? null : (
-            <button type="submit" mix={primaryAction}>
-              Save Flip
-            </button>
-          )}
-        </form>
-        <section mix={tagSection}>
-          <h2 mix={labelStyle}>Tags</h2>
-          {tags.length > 0 ? (
-            <ul mix={tagList}>
-              {tags.map((tag) => (
-                <li key={tag.id} mix={tagChip}>
-                  {tag.name}
-                  {readOnly ? null : (
-                    <form
-                      method="post"
-                      action={routes.flips.removeTag.href({ flipId: flip.id, tagId: tag.id })}
-                    >
-                      <input type="hidden" name="_csrf" value={csrf} />
-                      <button type="submit" aria-label={`Remove ${tag.name}`}>
-                        ×
-                      </button>
-                    </form>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p mix={mutedNote}>No Tags yet.</p>
-          )}
-          {readOnly ? null : (
-            <form
-              method="post"
-              action={routes.flips.addTag.href({ flipId: flip.id })}
-              mix={fieldStack}
-            >
-              <input type="hidden" name="_csrf" value={csrf} />
-              <label mix={labelStyle}>
-                Add Tag
+
+        <div mix={hubLayout}>
+          <aside mix={hubStatus}>
+            <div mix={[receipt, statusCard]}>
+              <SectionLabel>Status</SectionLabel>
+              {standingProfit ? (
+                <p
+                  mix={[
+                    profitLine,
+                    standingProfit.cents < 0 ? profitLineLoss : profitLineGain,
+                  ]}
+                >
+                  Profit {formatCents(standingProfit.cents)}
+                  {' · '}
+                  <a href={standingProfit.href}>{standingProfit.label}</a>
+                </p>
+              ) : null}
+              {isInventory && hitchCents > 0 ? (
+                <p mix={hitchLine}>
+                  {formatCents(hitchCents)} will count on the next Sale or Write-off
+                </p>
+              ) : null}
+              {parent ? (
+                <p mix={mutedNote}>
+                  Re-split from{' '}
+                  <a href={routes.flips.show.href({ flipId: parent.id })}>{parent.name}</a>
+                </p>
+              ) : null}
+              {undoneEvents.map((event) =>
+                event.kind === 'sale' ? (
+                  <p mix={mutedNote} key={`sale-${event.saleId}`}>
+                    Undone Sale
+                    {' · '}
+                    <a href={routes.sales.show.href({ saleId: event.saleId })}>Sale</a>
+                  </p>
+                ) : (
+                  <p mix={mutedNote} key={`write-off-${event.writeOffId}`}>
+                    Undone Write-off
+                    {' · '}
+                    <a href={routes.writeOffs.show.href({ writeOffId: event.writeOffId })}>
+                      Write-off
+                    </a>
+                  </p>
+                ),
+              )}
+              {standingProfit == null &&
+              undoneEvents.length === 0 &&
+              parent == null &&
+              !(isInventory && hitchCents > 0) ? (
+                <p mix={mutedNote}>In Inventory. Nothing has happened to this Flip yet.</p>
+              ) : null}
+            </div>
+          </aside>
+
+          <form
+            method="post"
+            action={routes.flips.update.href({ flipId: flip.id })}
+            mix={[receipt, hubForm, formCard]}
+          >
+            <input type="hidden" name="_csrf" value={csrf} />
+            <SectionLabel>The Flip</SectionLabel>
+            <div mix={fieldGrid}>
+              <label mix={[labelStyle, fieldWide]}>
+                Flip name
                 <input
                   type="text"
-                  name="tag"
-                  list="tag-names"
+                  name="name"
+                  required
+                  defaultValue={values?.name ?? flip.name}
                   autoComplete="off"
-                  placeholder="Name a Tag"
+                  readOnly={readOnly}
                 />
               </label>
-              <datalist id="tag-names">
-                {bookTags.map((tag) => (
-                  <option key={tag.id} value={tag.name}></option>
-                ))}
-              </datalist>
-              <button type="submit" mix={ghostAction}>
-                Add Tag
+              <label mix={[labelStyle, fieldWide]}>
+                Notes
+                <textarea
+                  name="notes"
+                  rows={3}
+                  defaultValue={values?.notes ?? flip.notes ?? ''}
+                  readOnly={readOnly}
+                ></textarea>
+              </label>
+              <MoneyField
+                label="Item cost"
+                name="item_cost"
+                required
+                defaultValue={values?.itemCost ?? centsToInput(flip.item_cost)}
+                readOnly={inboundFrozen || readOnly}
+              />
+              <MoneyField
+                label="Tax paid"
+                name="tax_paid"
+                defaultValue={values?.taxPaid ?? centsToInput(flip.tax_paid)}
+                readOnly={inboundFrozen || readOnly}
+              />
+              <MoneyField
+                label="Inbound shipping"
+                name="inbound_shipping"
+                defaultValue={values?.inboundShipping ?? centsToInput(flip.inbound_shipping)}
+                readOnly={inboundFrozen || readOnly}
+              />
+            </div>
+            {readOnly ? null : (
+              <button type="submit" mix={primaryAction}>
+                Save Flip
               </button>
-            </form>
-          )}
-        </section>
-        <p mix={mutedNote}>
-          <a href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}>
-            Acquisition {String(acquisition.acquisition_date)}
-          </a>
-        </p>
-        {typeof acquisition.notes === 'string' && acquisition.notes !== '' ? (
-          <p mix={mutedNote}>{acquisition.notes}</p>
-        ) : null}
-        {readOnly ? null : (
-          <p mix={leaveRow}>
-            <a
-              href={routes.acquisitions.continue.index.href({ acquisitionId: acquisition.id })}
-              mix={ghostAction}
-            >
-              Add Flips to this Acquisition
-            </a>
-          </p>
-        )}
-        {standing && !readOnly ? (
-          <p mix={leaveRow}>
-            <a href={routes.flips.undo.index.href({ flipId: flip.id })} mix={ghostAction}>
-              Undo
-            </a>
-          </p>
-        ) : null}
-        {isInventory && !readOnly ? (
-          <p mix={leaveRow}>
-            <a
-              href={`${routes.sales.new.index.href()}?flip=${flip.id}`}
-              mix={ghostAction}
-            >
-              Sold
-            </a>
-          </p>
-        ) : null}
-        {mayWriteOff && !readOnly ? (
-          <p mix={leaveRow}>
-            <a
-              href={`${routes.writeOffs.new.index.href()}?flip=${flip.id}`}
-              mix={ghostAction}
-            >
-              Write-off
-            </a>
-          </p>
-        ) : null}
-        {mayResplit && !readOnly ? (
-          <p mix={leaveRow}>
-            <a
-              href={routes.flips.resplit.index.href({ flipId: flip.id })}
-              mix={ghostAction}
-            >
-              Re-split
-            </a>
-          </p>
-        ) : null}
-        {mayRemove && !readOnly ? (
-          <form method="post" action={routes.flips.remove.href({ flipId: flip.id })}>
-            <input type="hidden" name="_csrf" value={csrf} />
-            <button type="submit" mix={ghostAction}>
-              Remove
-            </button>
+            )}
           </form>
-        ) : null}
+
+          <section mix={[receipt, tagSection, hubTags]}>
+            <SectionLabel>Tags</SectionLabel>
+            {tags.length > 0 ? (
+              <ul mix={tagRail}>
+                {tags.map((tag) => (
+                  <li key={tag.id} mix={priceTag}>
+                    {tag.name}
+                    {readOnly ? null : (
+                      <form
+                        method="post"
+                        action={routes.flips.removeTag.href({ flipId: flip.id, tagId: tag.id })}
+                      >
+                        <input type="hidden" name="_csrf" value={csrf} />
+                        <button type="submit" aria-label={`Remove ${tag.name}`}>
+                          ×
+                        </button>
+                      </form>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p mix={mutedNote}>No Tags yet.</p>
+            )}
+            {readOnly ? null : (
+              <form
+                method="post"
+                action={routes.flips.addTag.href({ flipId: flip.id })}
+                mix={addTagRow}
+              >
+                <input type="hidden" name="_csrf" value={csrf} />
+                <label mix={labelStyle}>
+                  Add Tag
+                  <input
+                    type="text"
+                    name="tag"
+                    list="tag-names"
+                    autoComplete="off"
+                    placeholder="Name a Tag"
+                  />
+                </label>
+                <datalist id="tag-names">
+                  {bookTags.map((tag) => (
+                    <option key={tag.id} value={tag.name}></option>
+                  ))}
+                </datalist>
+                <button type="submit" mix={ghostAction}>
+                  Add Tag
+                </button>
+              </form>
+            )}
+          </section>
+
+          <div mix={hubMeta}>
+            <div mix={[receipt, statusCard]}>
+              <SectionLabel>Acquisition</SectionLabel>
+              <p mix={acqLine}>
+                <a href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}>
+                  Acquisition {String(acquisition.acquisition_date)}
+                </a>
+              </p>
+              {typeof acquisition.notes === 'string' && acquisition.notes !== '' ? (
+                <p mix={mutedNote}>{acquisition.notes}</p>
+              ) : null}
+              {readOnly ? null : (
+                <p mix={stackGap}>
+                  <a
+                    href={routes.acquisitions.continue.index.href({
+                      acquisitionId: acquisition.id,
+                    })}
+                    mix={ghostAction}
+                  >
+                    Add Flips to this Acquisition
+                  </a>
+                </p>
+              )}
+            </div>
+
+            {readOnly ? null : (
+              <div mix={[receipt, statusCard]}>
+                <SectionLabel>Do something</SectionLabel>
+                <ActionStack>
+                  {isInventory ? (
+                    <a href={`${routes.sales.new.index.href()}?flip=${flip.id}`} mix={primaryAction}>
+                      Sold
+                    </a>
+                  ) : null}
+                  {mayWriteOff ? (
+                    <a
+                      href={`${routes.writeOffs.new.index.href()}?flip=${flip.id}`}
+                      mix={ghostAction}
+                    >
+                      Write-off
+                    </a>
+                  ) : null}
+                  {mayResplit ? (
+                    <a href={routes.flips.resplit.index.href({ flipId: flip.id })} mix={ghostAction}>
+                      Re-split
+                    </a>
+                  ) : null}
+                  {standing ? (
+                    <a href={routes.flips.undo.index.href({ flipId: flip.id })} mix={ghostAction}>
+                      Undo
+                    </a>
+                  ) : null}
+                  {mayRemove ? (
+                    <form method="post" action={routes.flips.remove.href({ flipId: flip.id })}>
+                      <input type="hidden" name="_csrf" value={csrf} />
+                      <button type="submit" mix={dangerAction}>
+                        Remove
+                      </button>
+                    </form>
+                  ) : null}
+                </ActionStack>
+              </div>
+            )}
+          </div>
+        </div>
       </AppShell>
     )
   }
 }
+
+/* ------------------------------- local styles ----------------------------- */
+
+/* Mobile stacks status -> edit form -> tags -> acquisition/actions.
+ * From 64rem the form takes the wide column and the rail carries context. */
+const hubLayout = css({
+  display: 'grid',
+  gap: '1.05rem',
+  alignItems: 'start',
+  '@media (min-width: 64rem)': {
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 21rem)',
+    gap: '1.5rem',
+  },
+})
+
+const hubStatus = css({
+  '@media (min-width: 64rem)': { gridColumn: 2, gridRow: 1 },
+})
+
+const hubForm = css({
+  '@media (min-width: 64rem)': { gridColumn: 1, gridRow: 1 },
+})
+
+const hubTags = css({
+  '@media (min-width: 64rem)': { gridColumn: 1, gridRow: 2 },
+})
+
+const hubMeta = css({
+  display: 'grid',
+  gap: '1.05rem',
+  alignContent: 'start',
+  '@media (min-width: 64rem)': { gridColumn: 2, gridRow: 2 },
+})
+
+const statusCard = css({
+  display: 'grid',
+  gap: '0.55rem',
+  padding: '1rem 1.05rem',
+})
+
+const formCard = css({
+  display: 'grid',
+  gap: '0.9rem',
+  padding: '1.1rem',
+})
+
+const profitLine = css({
+  margin: 0,
+  fontFamily: FONT_MONEY,
+  fontSize: '1.05rem',
+  fontWeight: 600,
+  letterSpacing: '-0.01em',
+  fontVariantNumeric: 'tabular-nums',
+})
+
+const profitLineGain = css({ color: 'var(--gain)' })
+const profitLineLoss = css({ color: 'var(--loss)' })
+
+/* The hitch is money already spent that has not landed anywhere yet, so it
+ * gets the pending-ink treatment rather than gain/loss colour. */
+const hitchLine = css({
+  margin: 0,
+  padding: '0.5rem 0.6rem',
+  borderLeft: '3px solid var(--gold)',
+  background: 'color-mix(in srgb, var(--gold) 10%, transparent)',
+  fontFamily: FONT_MONEY,
+  fontSize: '0.82rem',
+  lineHeight: 1.45,
+  color: 'var(--ink)',
+})
+
+const acqLine = css({
+  margin: 0,
+  fontSize: '0.95rem',
+})
+
+const addTagRow = css({
+  display: 'grid',
+  gap: '0.6rem',
+  marginTop: '0.9rem',
+  paddingTop: '0.9rem',
+  borderTop: '1px dashed var(--rule)',
+})
