@@ -21,21 +21,23 @@ export function InventoryPage(handle: {
     flips: Flip[]
     bookTags: Tag[]
     filter: { name: string; tagIds: string[]; untagged: boolean }
-    segment: 'inventory' | 'sold'
+    segment: 'inventory' | 'sold' | 'written-off'
   }
 }) {
   return () => {
     let { identity, flips, bookTags, filter, segment } = handle.props
     let selected = new Set(filter.tagIds)
     let sold = segment === 'sold'
+    let writtenOff = segment === 'written-off'
+    let title = sold ? 'Sold' : writtenOff ? 'Written-off' : 'Inventory'
 
     return (
-      <AppShell title={sold ? 'Sold' : 'Inventory'} identity={identity} current="inventory">
-        <h1 mix={heading}>{sold ? 'Sold' : 'Inventory'}</h1>
+      <AppShell title={title} identity={identity} current="inventory">
+        <h1 mix={heading}>{title}</h1>
         <p>
           <a
             href={inventoryHref('inventory', filter)}
-            aria-current={!sold ? 'page' : undefined}
+            aria-current={segment === 'inventory' ? 'page' : undefined}
           >
             Inventory
           </a>
@@ -43,9 +45,17 @@ export function InventoryPage(handle: {
           <a href={inventoryHref('sold', filter)} aria-current={sold ? 'page' : undefined}>
             Sold
           </a>
+          {' | '}
+          <a
+            href={inventoryHref('written-off', filter)}
+            aria-current={writtenOff ? 'page' : undefined}
+          >
+            Written-off
+          </a>
         </p>
         <form method="get" action={routes.inventory.href()} mix={fieldStack}>
           {sold ? <input type="hidden" name="segment" value="sold" /> : null}
+          {writtenOff ? <input type="hidden" name="segment" value="written-off" /> : null}
           <label mix={labelStyle}>
             Name
             <input
@@ -97,6 +107,8 @@ export function InventoryPage(handle: {
               'No Flips match.'
             ) : sold ? (
               'No sold Flips yet.'
+            ) : writtenOff ? (
+              'No written-off Flips yet.'
             ) : (
               <>
                 Nothing in Inventory yet.{' '}
@@ -104,8 +116,8 @@ export function InventoryPage(handle: {
               </>
             )}
           </p>
-        ) : sold ? (
-          <ol mix={inventoryList} id="sold-list">
+        ) : sold || writtenOff ? (
+          <ol mix={inventoryList} id={sold ? 'sold-list' : 'written-off-list'}>
             {flips.map((flip) => (
               <li key={flip.id} mix={inventoryItem} data-name={flip.name}>
                 <a href={routes.flips.show.href({ flipId: flip.id })}>{flip.name}</a>
@@ -130,6 +142,13 @@ export function InventoryPage(handle: {
               </button>
               <button
                 type="submit"
+                formaction={routes.writeOffs.new.index.href()}
+                mix={ghostAction}
+              >
+                Write-off
+              </button>
+              <button
+                type="submit"
                 formaction={routes.listings.new.index.href()}
                 mix={ghostAction}
               >
@@ -144,7 +163,7 @@ export function InventoryPage(handle: {
           </a>
         </p>
         <script>
-          {`(function(){var i=document.getElementById('inventory-name-filter');var list=document.getElementById('inventory-list')||document.getElementById('sold-list');if(!i||!list)return;i.addEventListener('input',function(){var q=i.value.trim().toLowerCase();for(var n=0;n<list.children.length;n++){var li=list.children[n];var name=(li.getAttribute('data-name')||'').toLowerCase();li.hidden=q!==''&&name.indexOf(q)===-1;}});})();`}
+          {`(function(){var i=document.getElementById('inventory-name-filter');var list=document.getElementById('inventory-list')||document.getElementById('sold-list')||document.getElementById('written-off-list');if(!i||!list)return;i.addEventListener('input',function(){var q=i.value.trim().toLowerCase();for(var n=0;n<list.children.length;n++){var li=list.children[n];var name=(li.getAttribute('data-name')||'').toLowerCase();li.hidden=q!==''&&name.indexOf(q)===-1;}});})();`}
         </script>
       </AppShell>
     )
@@ -152,12 +171,15 @@ export function InventoryPage(handle: {
 }
 
 function inventoryHref(
-  segment: 'inventory' | 'sold',
+  segment: 'inventory' | 'sold' | 'written-off',
   filter: { name: string; tagIds: string[]; untagged: boolean },
 ): string {
   let params = new URLSearchParams()
   if (segment === 'sold') {
     params.set('segment', 'sold')
+  }
+  if (segment === 'written-off') {
+    params.set('segment', 'written-off')
   }
   if (filter.name !== '') {
     params.set('q', filter.name)

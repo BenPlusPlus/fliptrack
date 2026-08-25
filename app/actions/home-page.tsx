@@ -69,6 +69,7 @@ export function HomePage(handle: {
                   <p>{slice.name}</p>
                   <p>Profit {formatCents(slice.profitCents)}</p>
                   <p>Sold {slice.soldCount}</p>
+                  <p>Written-off {slice.writtenOffCount}</p>
                   <p>Inventory {formatCents(slice.inventoryCents)}</p>
                   <p>Unsold {slice.unsoldCount}</p>
                 </li>

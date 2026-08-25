@@ -13,8 +13,19 @@ import {
   saleFlips,
   sales,
   tags,
+  writeOffFlips,
+  writeOffs,
 } from './schema.ts'
-import type { Acquisition, Channel, Flip, Listing, Operator, Sale, Tag } from './schema.ts'
+import type {
+  Acquisition,
+  Channel,
+  Flip,
+  Listing,
+  Operator,
+  Sale,
+  Tag,
+  WriteOff,
+} from './schema.ts'
 import { allocateShares } from '../utils/cents.ts'
 import {
   dateInWindow,
@@ -210,7 +221,7 @@ export async function replaceFlipFacts(
   if (!existing) {
     return null
   }
-  if (existing.retired || (await flipHasStandingSale(db, existing.id))) {
+  if (existing.retired || (await flipHasStandingRealizing(db, existing.id))) {
     return db.update(flips, input.flipId, {
       name: input.name,
       notes: input.notes,
@@ -248,6 +259,12 @@ export async function listInventory(
         where sale_flip.flip_id = flip.id
           and sale_flip.undone = false
       )
+      and not exists (
+        select 1
+        from write_off_flip
+        where write_off_flip.flip_id = flip.id
+          and write_off_flip.undone = false
+      )
     order by acquisition.acquisition_date desc, flip.name asc
   `)
   return applyFlipFilters(db, booksId, (result.rows ?? []) as Flip[], filter)
@@ -267,6 +284,24 @@ export async function listSold(
     where flip.books_id = ${booksId}
       and flip.retired = false
     order by sale.sale_date desc, flip.name asc
+  `)
+  return applyFlipFilters(db, booksId, (result.rows ?? []) as Flip[], filter)
+}
+
+export async function listWrittenOff(
+  db: AppDatabase,
+  booksId: string,
+  filter: InventoryFilter = {},
+): Promise<Flip[]> {
+  let result = await db.exec(sql`
+    select flip.*
+    from flip
+    join acquisition on acquisition.id = flip.acquisition_id
+    join write_off_flip on write_off_flip.flip_id = flip.id and write_off_flip.undone = false
+    join write_off on write_off.id = write_off_flip.write_off_id
+    where flip.books_id = ${booksId}
+      and flip.retired = false
+    order by write_off.write_off_date desc, flip.name asc
   `)
   return applyFlipFilters(db, booksId, (result.rows ?? []) as Flip[], filter)
 }
@@ -350,14 +385,16 @@ export async function loadFlipHub(
   if (!acquisition) {
     return null
   }
-  let [flipTagsForFlip, bookTags, parent, standing] = await Promise.all([
+  let [flipTagsForFlip, bookTags, parent, standingSale, standingWriteOff] = await Promise.all([
     listTagsForFlip(db, input),
     listTagsInBooks(db, input.booksId),
     flip.parent_flip_id
       ? findFlipInBooks(db, { flipId: flip.parent_flip_id, booksId: input.booksId })
       : Promise.resolve(null),
     loadStandingSaleForFlip(db, input),
+    loadStandingWriteOffForFlip(db, input),
   ])
+  let standing = standingSale ?? standingWriteOff
   let inboundFrozen = flip.retired || standing != null
   let [mayRemove, hasLiveListing] = await Promise.all([
     unusedFlipMayBeRemoved(db, flip),
@@ -375,6 +412,7 @@ export async function loadFlipHub(
     mayRemove,
     isInventory,
     mayResplit: isInventory && !hasLiveListing,
+    mayWriteOff: isInventory && !hasLiveListing,
   }
 }
 
@@ -394,6 +432,9 @@ export async function resplitFlip(
     }
     if (await flipHasStandingSale(tx, parent.id)) {
       return { ok: false, error: 'A Flip with a standing Sale cannot be re-split.' }
+    }
+    if (await flipHasStandingWriteOff(tx, parent.id)) {
+      return { ok: false, error: 'A Flip with a standing Write-off cannot be re-split.' }
     }
     if (await flipHasLiveListing(tx, parent.id)) {
       return { ok: false, error: 'A live Listing blocks Re-split. End the Listing first.' }
@@ -457,6 +498,10 @@ export async function unusedFlipMayBeRemoved(
   let result = await db.exec(sql`
     select 1
     from sale_flip
+    where flip_id = ${flip.id}
+    union all
+    select 1
+    from write_off_flip
     where flip_id = ${flip.id}
     limit 1
   `)
@@ -630,6 +675,21 @@ export async function flipHasStandingSale(db: AppDatabase, flipId: string): Prom
   return (result.rows?.length ?? 0) > 0
 }
 
+export async function flipHasStandingWriteOff(db: AppDatabase, flipId: string): Promise<boolean> {
+  let result = await db.exec(sql`
+    select 1
+    from write_off_flip
+    where flip_id = ${flipId}
+      and undone = false
+    limit 1
+  `)
+  return (result.rows?.length ?? 0) > 0
+}
+
+export async function flipHasStandingRealizing(db: AppDatabase, flipId: string): Promise<boolean> {
+  return (await flipHasStandingSale(db, flipId)) || (await flipHasStandingWriteOff(db, flipId))
+}
+
 export async function listChannelsInBooks(db: AppDatabase, booksId: string): Promise<Channel[]> {
   return db.findMany(channels, { where: { books_id: booksId }, orderBy: ['name', 'asc'] })
 }
@@ -729,7 +789,14 @@ export type KitFlip = {
 
 export async function loadKitFlips(
   db: AppDatabase,
-  input: { booksId: string; flipIds: string[]; emptyError?: string },
+  input: {
+    booksId: string
+    flipIds: string[]
+    emptyError?: string
+    notInventoryError?: string
+    requireNoLiveListing?: boolean
+    liveListingError?: string
+  },
 ): Promise<{ ok: true; kit: KitFlip[] } | { ok: false; error: string; status: number }> {
   let uniqueIds = [...new Set(input.flipIds.filter(Boolean))]
   if (uniqueIds.length === 0) {
@@ -742,8 +809,19 @@ export async function loadKitFlips(
     if (!flip) {
       return { ok: false, error: 'Not Found', status: 404 }
     }
-    if (flip.retired || (await flipHasStandingSale(db, flip.id))) {
-      return { ok: false, error: 'Sold from Inventory Flips only.', status: 400 }
+    if (flip.retired || (await flipHasStandingRealizing(db, flip.id))) {
+      return {
+        ok: false,
+        error: input.notInventoryError ?? 'Sold from Inventory Flips only.',
+        status: 400,
+      }
+    }
+    if (input.requireNoLiveListing && (await flipHasLiveListing(db, flip.id))) {
+      return {
+        ok: false,
+        error: input.liveListingError ?? 'A live Listing blocks Write-off. End the Listing first.',
+        status: 400,
+      }
     }
     kit.push({ flip, acquisitionCostCents: acquisitionCostCents(flip) })
   }
@@ -784,8 +862,21 @@ export async function listingSpendIsFrozen(db: AppDatabase, listingId: string): 
   let result = await db.exec(sql`
     select 1
     from listing_flip
-    join sale_flip on sale_flip.flip_id = listing_flip.flip_id and sale_flip.undone = false
     where listing_flip.listing_id = ${listingId}
+      and (
+        exists (
+          select 1
+          from sale_flip
+          where sale_flip.flip_id = listing_flip.flip_id
+            and sale_flip.undone = false
+        )
+        or exists (
+          select 1
+          from write_off_flip
+          where write_off_flip.flip_id = listing_flip.flip_id
+            and write_off_flip.undone = false
+        )
+      )
     limit 1
   `)
   return (result.rows?.length ?? 0) > 0
@@ -872,7 +963,7 @@ export async function loadListingHub(
   let members = await listListingFlips(db, input)
   let remainingInventory: Flip[] = []
   for (let flip of members) {
-    if (!flip.retired && !(await flipHasStandingSale(db, flip.id))) {
+    if (!flip.retired && !(await flipHasStandingRealizing(db, flip.id))) {
       remainingInventory.push(flip)
     }
   }
@@ -976,6 +1067,12 @@ async function endSoldOutListings(db: AppDatabase, booksId: string): Promise<voi
             from sale_flip
             where sale_flip.flip_id = flip.id
               and sale_flip.undone = false
+          )
+          and not exists (
+            select 1
+            from write_off_flip
+            where write_off_flip.flip_id = flip.id
+              and write_off_flip.undone = false
           )
       )
   `)
@@ -1094,10 +1191,19 @@ export async function loadStandingKit(
 }
 
 export type StandingSaleOnFlip = {
+  kind: 'sale'
   sale: Sale
   channel: Channel
   profitCents: number
 }
+
+export type StandingWriteOffOnFlip = {
+  kind: 'write-off'
+  writeOff: WriteOff
+  profitCents: number
+}
+
+export type StandingRealizingOnFlip = StandingSaleOnFlip | StandingWriteOffOnFlip
 
 export async function loadStandingSaleForFlip(
   db: AppDatabase,
@@ -1127,7 +1233,7 @@ export async function loadStandingSaleForFlip(
   let kit = await loadStandingKit(db, { saleId: sale.id, booksId: input.booksId })
   let listingSpend = await listingSpendByFlipId(db, input.booksId)
   let profits = profitSharesForKit(sale, kit, listingSpend)
-  return { sale, channel, profitCents: profits.get(input.flipId) ?? 0 }
+  return { kind: 'sale', sale, channel, profitCents: profits.get(input.flipId) ?? 0 }
 }
 
 export function profitSharesForKit(
@@ -1246,11 +1352,171 @@ export async function replaceSale(
   })
 }
 
+export async function findWriteOffInBooks(
+  db: AppDatabase,
+  input: { writeOffId: string; booksId: string },
+): Promise<WriteOff | null> {
+  return db.findOne(writeOffs, { where: { id: input.writeOffId, books_id: input.booksId } })
+}
+
+export async function loadStandingWriteOffKit(
+  db: AppDatabase,
+  input: { writeOffId: string; booksId: string },
+): Promise<KitFlip[]> {
+  let result = await db.exec(sql`
+    select flip.*
+    from flip
+    join write_off_flip on write_off_flip.flip_id = flip.id
+    where write_off_flip.write_off_id = ${input.writeOffId}
+      and write_off_flip.books_id = ${input.booksId}
+      and write_off_flip.undone = false
+    order by flip.name asc, flip.id asc
+  `)
+  return ((result.rows ?? []) as Flip[]).map((flip) => ({
+    flip,
+    acquisitionCostCents: acquisitionCostCents(flip),
+  }))
+}
+
+export async function loadStandingWriteOffForFlip(
+  db: AppDatabase,
+  input: { flipId: string; booksId: string },
+): Promise<StandingWriteOffOnFlip | null> {
+  let result = await db.exec(sql`
+    select write_off.id
+    from write_off
+    join write_off_flip on write_off_flip.write_off_id = write_off.id
+    where write_off_flip.flip_id = ${input.flipId}
+      and write_off_flip.books_id = ${input.booksId}
+      and write_off_flip.undone = false
+    limit 1
+  `)
+  let writeOffId = result.rows?.[0]?.id ? String(result.rows[0].id) : null
+  if (!writeOffId) {
+    return null
+  }
+  let writeOff = await findWriteOffInBooks(db, { writeOffId, booksId: input.booksId })
+  if (!writeOff) {
+    return null
+  }
+  let kit = await loadStandingWriteOffKit(db, { writeOffId: writeOff.id, booksId: input.booksId })
+  let listingSpend = await listingSpendByFlipId(db, input.booksId)
+  let profits = profitSharesForKit(writeOffAsSaleMoney(writeOff), kit, listingSpend)
+  return { kind: 'write-off', writeOff, profitCents: profits.get(input.flipId) ?? 0 }
+}
+
+function writeOffAsSaleMoney(
+  writeOff: Pick<WriteOff, 'outbound_shipping' | 'supplies'>,
+): Pick<
+  Sale,
+  'sale_price' | 'buyer_paid_shipping' | 'marketplace_fee' | 'outbound_shipping' | 'supplies'
+> {
+  return {
+    sale_price: 0,
+    buyer_paid_shipping: 0,
+    marketplace_fee: 0,
+    outbound_shipping: writeOff.outbound_shipping,
+    supplies: writeOff.supplies,
+  }
+}
+
+export type CreateWriteOffInput = {
+  booksId: string
+  flipIds: string[]
+  writeOffDate: string
+  outboundShipping: number
+  supplies: number
+  notes?: string
+}
+
+export async function createWriteOff(
+  db: AppDatabase,
+  input: CreateWriteOffInput,
+): Promise<{ ok: true; writeOff: WriteOff } | { ok: false; error: string; status: number }> {
+  return db.transaction(async (tx) => {
+    let kit = await loadKitFlips(tx, {
+      booksId: input.booksId,
+      flipIds: input.flipIds,
+      emptyError: 'Pick Inventory Flips to write off.',
+      notInventoryError: 'Write-off from Inventory Flips only.',
+      requireNoLiveListing: true,
+      liveListingError: 'A live Listing blocks Write-off. End the Listing first.',
+    })
+    if (!kit.ok) {
+      return kit
+    }
+    let writeOff = (await tx.create(
+      writeOffs,
+      {
+        id: crypto.randomUUID(),
+        books_id: input.booksId,
+        write_off_date: input.writeOffDate,
+        outbound_shipping: input.outboundShipping,
+        supplies: input.supplies,
+        ...(input.notes ? { notes: input.notes } : {}),
+      },
+      { returnRow: true },
+    )) as WriteOff
+    for (let row of kit.kit) {
+      await tx.create(writeOffFlips, {
+        books_id: input.booksId,
+        write_off_id: writeOff.id,
+        flip_id: row.flip.id,
+        undone: false,
+      })
+    }
+    await endSoldOutListings(tx, input.booksId)
+    return { ok: true as const, writeOff }
+  })
+}
+
+export async function replaceWriteOff(
+  db: AppDatabase,
+  input: Omit<CreateWriteOffInput, 'flipIds'> & { writeOffId: string },
+): Promise<{ ok: true; writeOff: WriteOff } | { ok: false; error: string; status: number }> {
+  return db.transaction(async (tx) => {
+    let writeOff = await findWriteOffInBooks(tx, {
+      writeOffId: input.writeOffId,
+      booksId: input.booksId,
+    })
+    if (!writeOff) {
+      return { ok: false, error: 'Not Found', status: 404 }
+    }
+    let kit = await loadStandingWriteOffKit(tx, {
+      writeOffId: writeOff.id,
+      booksId: input.booksId,
+    })
+    if (kit.length === 0) {
+      return { ok: false, error: 'This Write-off no longer stands.', status: 400 }
+    }
+    let updated = (await tx.update(writeOffs, writeOff.id, {
+      write_off_date: input.writeOffDate,
+      outbound_shipping: input.outboundShipping,
+      supplies: input.supplies,
+      notes: input.notes,
+    })) as WriteOff
+    return { ok: true as const, writeOff: updated }
+  })
+}
+
+export async function loadWriteOffHub(
+  db: AppDatabase,
+  input: { writeOffId: string; booksId: string },
+) {
+  let writeOff = await findWriteOffInBooks(db, input)
+  if (!writeOff) {
+    return null
+  }
+  let kit = await loadStandingWriteOffKit(db, input)
+  return { writeOff, kit }
+}
+
 export type TagSlice = {
   name: string
   untagged: boolean
   profitCents: number
   soldCount: number
+  writtenOffCount: number
   inventoryCents: number
   unsoldCount: number
 }
@@ -1265,8 +1531,9 @@ export type HomePnl = {
 
 type FlipProfit = {
   flipId: string
-  saleDate: string
+  date: string
   profitCents: number
+  kind: 'sale' | 'write-off'
 }
 
 async function loadStandingFlipProfits(
@@ -1329,6 +1596,44 @@ async function loadStandingFlipProfits(
     group.flipIds.push(String(row.flip_id))
   }
 
+  let writeOffMembership = await db.exec(sql`
+    select
+      write_off_flip.flip_id,
+      write_off.id as write_off_id,
+      write_off.write_off_date,
+      write_off.outbound_shipping,
+      write_off.supplies
+    from write_off_flip
+    join write_off on write_off.id = write_off_flip.write_off_id
+    where write_off_flip.books_id = ${booksId}
+      and write_off_flip.undone = false
+  `)
+
+  type WriteOffGroup = {
+    writeOffId: string
+    writeOffDate: string
+    writeOff: Pick<WriteOff, 'outbound_shipping' | 'supplies'>
+    flipIds: string[]
+  }
+  let writeOffGroups = new Map<string, WriteOffGroup>()
+  for (let row of writeOffMembership.rows ?? []) {
+    let writeOffId = String(row.write_off_id)
+    let group = writeOffGroups.get(writeOffId)
+    if (!group) {
+      group = {
+        writeOffId,
+        writeOffDate: String(row.write_off_date),
+        writeOff: {
+          outbound_shipping: Number(row.outbound_shipping),
+          supplies: Number(row.supplies),
+        },
+        flipIds: [],
+      }
+      writeOffGroups.set(writeOffId, group)
+    }
+    group.flipIds.push(String(row.flip_id))
+  }
+
   let listingSpend = await listingSpendByFlipId(db, booksId)
   let profits = new Map<string, FlipProfit>()
   for (let group of groups.values()) {
@@ -1341,7 +1646,20 @@ async function loadStandingFlipProfits(
     }
     let shares = profitSharesForKit(group.sale, kit, listingSpend)
     for (let [flipId, profitCents] of shares) {
-      profits.set(flipId, { flipId, saleDate: group.saleDate, profitCents })
+      profits.set(flipId, { flipId, date: group.saleDate, profitCents, kind: 'sale' })
+    }
+  }
+  for (let group of writeOffGroups.values()) {
+    let kit: KitFlip[] = []
+    for (let flipId of group.flipIds) {
+      let flip = flipsById.get(flipId)
+      if (flip) {
+        kit.push({ flip, acquisitionCostCents: acquisitionCostCents(flip) })
+      }
+    }
+    let shares = profitSharesForKit(writeOffAsSaleMoney(group.writeOff), kit, listingSpend)
+    for (let [flipId, profitCents] of shares) {
+      profits.set(flipId, { flipId, date: group.writeOffDate, profitCents, kind: 'write-off' })
     }
   }
 
@@ -1356,7 +1674,7 @@ function sumProfitInWindow(
 ): number {
   let total = 0
   for (let row of profits) {
-    if (dateInWindow(row.saleDate, today, kind, weekStart)) {
+    if (dateInWindow(row.date, today, kind, weekStart)) {
       total += row.profitCents
     }
   }
@@ -1374,21 +1692,26 @@ function sliceForFlips(
 ): TagSlice {
   let profitCents = 0
   let soldCount = 0
+  let writtenOffCount = 0
   let inventoryCents = 0
   let unsoldCount = 0
   for (let flip of flipsForSlice) {
     let realized = profits.get(flip.id)
     if (realized) {
-      if (dateInWindow(realized.saleDate, today, kind, weekStart)) {
+      if (dateInWindow(realized.date, today, kind, weekStart)) {
         profitCents += realized.profitCents
-        soldCount += 1
+        if (realized.kind === 'write-off') {
+          writtenOffCount += 1
+        } else {
+          soldCount += 1
+        }
       }
     } else {
       inventoryCents += acquisitionCostCents(flip)
       unsoldCount += 1
     }
   }
-  return { name, untagged, profitCents, soldCount, inventoryCents, unsoldCount }
+  return { name, untagged, profitCents, soldCount, writtenOffCount, inventoryCents, unsoldCount }
 }
 
 export async function loadHomePnl(

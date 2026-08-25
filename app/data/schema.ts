@@ -135,6 +135,32 @@ export const listingFlips = table({
   },
 })
 
+export const writeOffs = table({
+  name: 'write_off',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    write_off_date: c.date().notNull(),
+    outbound_shipping: c.integer().notNull(),
+    supplies: c.integer().notNull(),
+    notes: c.text(),
+  },
+})
+
+export const writeOffFlips = table({
+  name: 'write_off_flip',
+  primaryKey: ['write_off_id', 'flip_id'],
+  columns: {
+    books_id: c.uuid().notNull().references('books', 'id'),
+    write_off_id: c.uuid().notNull().references('write_off', 'id'),
+    flip_id: c.uuid().notNull().references('flip', 'id'),
+    undone: c.boolean().notNull(),
+    hitch_marketplace_fee: c.integer(),
+    hitch_outbound_shipping: c.integer(),
+    hitch_supplies: c.integer(),
+  },
+})
+
 export type Books = TableRow<typeof books>
 export type Operator = TableRow<typeof operators>
 export type Acquisition = TableRow<typeof acquisitions>
@@ -145,3 +171,5 @@ export type Sale = TableRow<typeof sales>
 export type SaleFlip = TableRow<typeof saleFlips>
 export type Listing = TableRow<typeof listings>
 export type ListingFlip = TableRow<typeof listingFlips>
+export type WriteOff = TableRow<typeof writeOffs>
+export type WriteOffFlip = TableRow<typeof writeOffFlips>

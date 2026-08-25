@@ -12,7 +12,7 @@ import {
 import { databaseContext } from '../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../middleware/auth.ts'
-import type { StandingSaleOnFlip } from '../../data/queries.ts'
+import type { StandingRealizingOnFlip } from '../../data/queries.ts'
 import type { Acquisition, Flip, Tag } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
@@ -59,6 +59,7 @@ export default createController(routes.flips, {
           mayRemove={hub.mayRemove}
           isInventory={hub.isInventory}
           mayResplit={hub.mayResplit}
+          mayWriteOff={hub.mayWriteOff}
         />,
       )
     },
@@ -84,6 +85,7 @@ export default createController(routes.flips, {
         mayRemove,
         isInventory,
         mayResplit,
+        mayWriteOff,
       } = hub
 
       let formData = context.get(FormData)
@@ -108,6 +110,7 @@ export default createController(routes.flips, {
             mayRemove={mayRemove}
             isInventory={isInventory}
             mayResplit={mayResplit}
+            mayWriteOff={mayWriteOff}
             error={
               name === ''
                 ? 'Flip name is required.'
@@ -203,11 +206,12 @@ function FlipHubPage(handle: {
     tags: Tag[]
     bookTags: Tag[]
     parent: Flip | null
-    standing: StandingSaleOnFlip | null
+    standing: StandingRealizingOnFlip | null
     inboundFrozen: boolean
     mayRemove: boolean
     isInventory: boolean
     mayResplit: boolean
+    mayWriteOff: boolean
     error?: string
     values?: {
       name: string
@@ -232,6 +236,7 @@ function FlipHubPage(handle: {
       mayRemove,
       isInventory,
       mayResplit,
+      mayWriteOff,
       error,
       values,
     } = handle.props
@@ -246,11 +251,18 @@ function FlipHubPage(handle: {
             <a href={routes.flips.show.href({ flipId: parent.id })}>{parent.name}</a>
           </p>
         ) : null}
-        {standing ? (
+        {standing?.kind === 'sale' ? (
           <p mix={mutedNote}>
             Profit {formatCents(standing.profitCents)}
             {' · '}
             <a href={routes.sales.show.href({ saleId: standing.sale.id })}>Sale</a>
+          </p>
+        ) : null}
+        {standing?.kind === 'write-off' ? (
+          <p mix={mutedNote}>
+            Profit {formatCents(standing.profitCents)}
+            {' · '}
+            <a href={routes.writeOffs.show.href({ writeOffId: standing.writeOff.id })}>Write-off</a>
           </p>
         ) : null}
         {error ? <p mix={errorBanner}>{error}</p> : null}
@@ -372,6 +384,16 @@ function FlipHubPage(handle: {
               mix={ghostAction}
             >
               Sold
+            </a>
+          </p>
+        ) : null}
+        {mayWriteOff ? (
+          <p mix={leaveRow}>
+            <a
+              href={`${routes.writeOffs.new.index.href()}?flip=${flip.id}`}
+              mix={ghostAction}
+            >
+              Write-off
             </a>
           </p>
         ) : null}

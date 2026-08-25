@@ -9,6 +9,7 @@ import {
   listInventory,
   listSold,
   listTagsInBooks,
+  listWrittenOff,
   loadHomePnl,
 } from '../data/queries.ts'
 import {
@@ -65,12 +66,19 @@ export default createController(routes, {
         let name = context.url.searchParams.get('q') ?? ''
         let untagged = context.url.searchParams.get('untagged') === '1'
         let tagIds = untagged ? [] : context.url.searchParams.getAll('tag')
-        let segment: 'inventory' | 'sold' =
-          context.url.searchParams.get('segment') === 'sold' ? 'sold' : 'inventory'
+        let segmentParam = context.url.searchParams.get('segment')
+        let segment: 'inventory' | 'sold' | 'written-off' =
+          segmentParam === 'sold'
+            ? 'sold'
+            : segmentParam === 'written-off'
+              ? 'written-off'
+              : 'inventory'
         let [flips, bookTags] = await Promise.all([
           segment === 'sold'
             ? listSold(db, identity.booksId, { name, tagIds, untagged })
-            : listInventory(db, identity.booksId, { name, tagIds, untagged }),
+            : segment === 'written-off'
+              ? listWrittenOff(db, identity.booksId, { name, tagIds, untagged })
+              : listInventory(db, identity.booksId, { name, tagIds, untagged }),
           listTagsInBooks(db, identity.booksId),
         ])
         return context.render(

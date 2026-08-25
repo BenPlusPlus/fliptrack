@@ -33,6 +33,11 @@ export const routes = route({
     show: get('/sales/:saleId'),
     update: post('/sales/:saleId'),
   },
+  writeOffs: {
+    new: form('/write-offs/new'),
+    show: get('/write-offs/:writeOffId'),
+    update: post('/write-offs/:writeOffId'),
+  },
   flips: {
     show: get('/flips/:flipId'),
     update: post('/flips/:flipId'),

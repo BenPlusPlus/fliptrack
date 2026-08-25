@@ -6,6 +6,7 @@ import {
   findFlipInBooks,
   flipHasLiveListing,
   flipHasStandingSale,
+  flipHasStandingWriteOff,
   resplitFlip,
 } from '../../../data/queries.ts'
 import { databaseContext } from '../../../middleware/database.ts'
@@ -42,6 +43,7 @@ export default createController(routes.flips.resplit, {
         !flip ||
         flip.retired ||
         (await flipHasStandingSale(db, flip.id)) ||
+        (await flipHasStandingWriteOff(db, flip.id)) ||
         (await flipHasLiveListing(db, flip.id))
       ) {
         return new Response('Not Found', { status: 404 })
