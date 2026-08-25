@@ -61,6 +61,8 @@ export function SalePage(handle: {
                 ) : (
                   <>
                     {row.flip.name} — Acquisition cost {formatCents(row.acquisitionCostCents)}
+                    {' · '}
+                    <a href={routes.flips.undo.index.href({ flipId: row.flip.id })}>Undo</a>
                   </>
                 )}
               </li>

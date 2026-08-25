@@ -12,7 +12,7 @@ import {
 import { databaseContext } from '../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../middleware/auth.ts'
-import type { StandingRealizingOnFlip } from '../../data/queries.ts'
+import type { StandingRealizingOnFlip, UndoneEventOnFlip } from '../../data/queries.ts'
 import type { Acquisition, Flip, Tag } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
@@ -55,6 +55,8 @@ export default createController(routes.flips, {
           bookTags={hub.bookTags}
           parent={hub.parent}
           standing={hub.standing}
+          hitchCents={hub.hitchCents}
+          undoneEvents={hub.undoneEvents}
           inboundFrozen={hub.inboundFrozen}
           mayRemove={hub.mayRemove}
           isInventory={hub.isInventory}
@@ -81,6 +83,8 @@ export default createController(routes.flips, {
         bookTags,
         parent,
         standing,
+        hitchCents,
+        undoneEvents,
         inboundFrozen,
         mayRemove,
         isInventory,
@@ -106,6 +110,8 @@ export default createController(routes.flips, {
             bookTags={bookTags}
             parent={parent}
             standing={standing}
+            hitchCents={hitchCents}
+            undoneEvents={undoneEvents}
             inboundFrozen={inboundFrozen}
             mayRemove={mayRemove}
             isInventory={isInventory}
@@ -207,6 +213,8 @@ function FlipHubPage(handle: {
     bookTags: Tag[]
     parent: Flip | null
     standing: StandingRealizingOnFlip | null
+    hitchCents: number
+    undoneEvents: UndoneEventOnFlip[]
     inboundFrozen: boolean
     mayRemove: boolean
     isInventory: boolean
@@ -232,6 +240,8 @@ function FlipHubPage(handle: {
       bookTags,
       parent,
       standing,
+      hitchCents,
+      undoneEvents,
       inboundFrozen,
       mayRemove,
       isInventory,
@@ -265,6 +275,26 @@ function FlipHubPage(handle: {
             <a href={routes.writeOffs.show.href({ writeOffId: standing.writeOff.id })}>Write-off</a>
           </p>
         ) : null}
+        {isInventory && hitchCents > 0 ? (
+          <p mix={mutedNote}>
+            {formatCents(hitchCents)} will count on the next Sale or Write-off
+          </p>
+        ) : null}
+        {undoneEvents.map((event) =>
+          event.kind === 'sale' ? (
+            <p mix={mutedNote} key={`sale-${event.saleId}`}>
+              Undone Sale
+              {' · '}
+              <a href={routes.sales.show.href({ saleId: event.saleId })}>Sale</a>
+            </p>
+          ) : (
+            <p mix={mutedNote} key={`write-off-${event.writeOffId}`}>
+              Undone Write-off
+              {' · '}
+              <a href={routes.writeOffs.show.href({ writeOffId: event.writeOffId })}>Write-off</a>
+            </p>
+          ),
+        )}
         {error ? <p mix={errorBanner}>{error}</p> : null}
         <form method="post" action={routes.flips.update.href({ flipId: flip.id })} mix={fieldStack}>
           <input type="hidden" name="_csrf" value={csrf} />
@@ -377,6 +407,13 @@ function FlipHubPage(handle: {
             Add Flips to this Acquisition
           </a>
         </p>
+        {standing ? (
+          <p mix={leaveRow}>
+            <a href={routes.flips.undo.index.href({ flipId: flip.id })} mix={ghostAction}>
+              Undo
+            </a>
+          </p>
+        ) : null}
         {isInventory ? (
           <p mix={leaveRow}>
             <a

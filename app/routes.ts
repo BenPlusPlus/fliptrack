@@ -45,5 +45,6 @@ export const routes = route({
     removeTag: post('/flips/:flipId/tags/:tagId/remove'),
     remove: post('/flips/:flipId/remove'),
     resplit: form('/flips/:flipId/resplit'),
+    undo: form('/flips/:flipId/undo'),
   },
 })

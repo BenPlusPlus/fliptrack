@@ -396,9 +396,11 @@ export async function loadFlipHub(
   ])
   let standing = standingSale ?? standingWriteOff
   let inboundFrozen = flip.retired || standing != null
-  let [mayRemove, hasLiveListing] = await Promise.all([
+  let [mayRemove, hasLiveListing, hitch, undoneEvents] = await Promise.all([
     unusedFlipMayBeRemoved(db, flip),
     flipHasLiveListing(db, flip.id),
+    hitchByFlipId(db, input.booksId),
+    listUndoneEventsForFlip(db, input),
   ])
   let isInventory = !flip.retired && standing == null
   return {
@@ -408,6 +410,8 @@ export async function loadFlipHub(
     bookTags,
     parent,
     standing,
+    hitchCents: hitch.get(flip.id) ?? 0,
+    undoneEvents,
     inboundFrozen,
     mayRemove,
     isInventory,
@@ -1151,6 +1155,121 @@ export async function listingSpendByFlipId(
   return spendByFlip
 }
 
+export async function hitchByFlipId(
+  db: AppDatabase,
+  booksId: string,
+): Promise<Map<string, number>> {
+  let flipRows = await db.exec(sql`
+    select *
+    from flip
+    where books_id = ${booksId}
+  `)
+  let allFlips = (flipRows.rows ?? []) as Flip[]
+  let flipsById = new Map(allFlips.map((flip) => [flip.id, flip]))
+
+  let hitchRows = await db.exec(sql`
+    select flip_id, hitch_marketplace_fee, hitch_outbound_shipping, hitch_supplies
+    from sale_flip
+    where books_id = ${booksId}
+      and undone = true
+    union all
+    select flip_id, hitch_marketplace_fee, hitch_outbound_shipping, hitch_supplies
+    from write_off_flip
+    where books_id = ${booksId}
+      and undone = true
+  `)
+
+  let hitchOnFlip = new Map<string, number>()
+  for (let row of hitchRows.rows ?? []) {
+    let flipId = String(row.flip_id)
+    let cents =
+      Number(row.hitch_marketplace_fee ?? 0) +
+      Number(row.hitch_outbound_shipping ?? 0) +
+      Number(row.hitch_supplies ?? 0)
+    hitchOnFlip.set(flipId, (hitchOnFlip.get(flipId) ?? 0) + cents)
+  }
+
+  let hitchByFlip = new Map<string, number>()
+  function addHitch(flipId: string, cents: number) {
+    hitchByFlip.set(flipId, (hitchByFlip.get(flipId) ?? 0) + cents)
+  }
+
+  for (let [flipId, cents] of hitchOnFlip) {
+    let flip = flipsById.get(flipId)
+    if (!flip) {
+      continue
+    }
+    if (!flip.retired) {
+      addHitch(flipId, cents)
+      continue
+    }
+    let descendants = nonRetiredDescendants(flip.id, allFlips, flipsById)
+    if (descendants.length === 0) {
+      continue
+    }
+    descendants.sort((a, b) => a.id.localeCompare(b.id))
+    let childShares = allocateShares(
+      cents,
+      descendants.map((row) => acquisitionCostCents(row)),
+    )
+    for (let index = 0; index < descendants.length; index += 1) {
+      addHitch(descendants[index]!.id, childShares[index]!)
+    }
+  }
+
+  return hitchByFlip
+}
+
+export type UndoneEventOnFlip =
+  | { kind: 'sale'; saleId: string; saleDate: string }
+  | { kind: 'write-off'; writeOffId: string; writeOffDate: string }
+
+export async function listUndoneEventsForFlip(
+  db: AppDatabase,
+  input: { flipId: string; booksId: string },
+): Promise<UndoneEventOnFlip[]> {
+  let saleRows = await db.exec(sql`
+    select sale.id, sale.sale_date
+    from sale_flip
+    join sale on sale.id = sale_flip.sale_id
+    where sale_flip.flip_id = ${input.flipId}
+      and sale_flip.books_id = ${input.booksId}
+      and sale_flip.undone = true
+  `)
+  let writeOffRows = await db.exec(sql`
+    select write_off.id, write_off.write_off_date
+    from write_off_flip
+    join write_off on write_off.id = write_off_flip.write_off_id
+    where write_off_flip.flip_id = ${input.flipId}
+      and write_off_flip.books_id = ${input.booksId}
+      and write_off_flip.undone = true
+  `)
+
+  let events: UndoneEventOnFlip[] = []
+  for (let row of saleRows.rows ?? []) {
+    events.push({
+      kind: 'sale',
+      saleId: String(row.id),
+      saleDate: String(row.sale_date),
+    })
+  }
+  for (let row of writeOffRows.rows ?? []) {
+    events.push({
+      kind: 'write-off',
+      writeOffId: String(row.id),
+      writeOffDate: String(row.write_off_date),
+    })
+  }
+  events.sort((a, b) => {
+    let dateA = a.kind === 'sale' ? a.saleDate : a.writeOffDate
+    let dateB = b.kind === 'sale' ? b.saleDate : b.writeOffDate
+    let idA = a.kind === 'sale' ? a.saleId : a.writeOffId
+    let idB = b.kind === 'sale' ? b.saleId : b.writeOffId
+    return dateB.localeCompare(dateA) || idB.localeCompare(idA)
+  })
+  return events
+}
+
 function nonRetiredDescendants(
   ancestorId: string,
   allFlips: Flip[],
@@ -1231,9 +1350,47 @@ export async function loadStandingSaleForFlip(
     return null
   }
   let kit = await loadStandingKit(db, { saleId: sale.id, booksId: input.booksId })
-  let listingSpend = await listingSpendByFlipId(db, input.booksId)
-  let profits = profitSharesForKit(sale, kit, listingSpend)
+  let [listingSpend, hitch] = await Promise.all([
+    listingSpendByFlipId(db, input.booksId),
+    hitchByFlipId(db, input.booksId),
+  ])
+  let profits = profitSharesForKit(sale, kit, listingSpend, hitch)
   return { kind: 'sale', sale, channel, profitCents: profits.get(input.flipId) ?? 0 }
+}
+
+export type TypedMoneyShare = {
+  salePrice: number
+  buyerPaidShipping: number
+  marketplaceFee: number
+  outboundShipping: number
+  supplies: number
+}
+
+export function typedMoneySharesForKit(
+  money: Pick<
+    Sale,
+    'sale_price' | 'buyer_paid_shipping' | 'marketplace_fee' | 'outbound_shipping' | 'supplies'
+  >,
+  kit: KitFlip[],
+): Map<string, TypedMoneyShare> {
+  let ordered = [...kit].sort((a, b) => a.flip.id.localeCompare(b.flip.id))
+  let weights = ordered.map((row) => row.acquisitionCostCents)
+  let salePriceShares = allocateShares(money.sale_price, weights)
+  let buyerPaidShares = allocateShares(money.buyer_paid_shipping, weights)
+  let feeShares = allocateShares(money.marketplace_fee, weights)
+  let shipShares = allocateShares(money.outbound_shipping, weights)
+  let supplyShares = allocateShares(money.supplies, weights)
+  let shares = new Map<string, TypedMoneyShare>()
+  for (let index = 0; index < ordered.length; index += 1) {
+    shares.set(ordered[index]!.flip.id, {
+      salePrice: salePriceShares[index]!,
+      buyerPaidShipping: buyerPaidShares[index]!,
+      marketplaceFee: feeShares[index]!,
+      outboundShipping: shipShares[index]!,
+      supplies: supplyShares[index]!,
+    })
+  }
+  return shares
 }
 
 export function profitSharesForKit(
@@ -1243,6 +1400,7 @@ export function profitSharesForKit(
   >,
   kit: KitFlip[],
   listingSpendByFlip: Map<string, number> = new Map(),
+  hitchByFlip: Map<string, number> = new Map(),
 ): Map<string, number> {
   let ordered = [...kit].sort((a, b) => a.flip.id.localeCompare(b.flip.id))
   let weights = ordered.map((row) => row.acquisitionCostCents)
@@ -1258,6 +1416,7 @@ export function profitSharesForKit(
       proceedsShares[index]! -
         weights[index]! -
         (listingSpendByFlip.get(flipId) ?? 0) -
+        (hitchByFlip.get(flipId) ?? 0) -
         feeShares[index]! -
         shipShares[index]! -
         supplyShares[index]!,
@@ -1400,8 +1559,11 @@ export async function loadStandingWriteOffForFlip(
     return null
   }
   let kit = await loadStandingWriteOffKit(db, { writeOffId: writeOff.id, booksId: input.booksId })
-  let listingSpend = await listingSpendByFlipId(db, input.booksId)
-  let profits = profitSharesForKit(writeOffAsSaleMoney(writeOff), kit, listingSpend)
+  let [listingSpend, hitch] = await Promise.all([
+    listingSpendByFlipId(db, input.booksId),
+    hitchByFlipId(db, input.booksId),
+  ])
+  let profits = profitSharesForKit(writeOffAsSaleMoney(writeOff), kit, listingSpend, hitch)
   return { kind: 'write-off', writeOff, profitCents: profits.get(input.flipId) ?? 0 }
 }
 
@@ -1497,6 +1659,179 @@ export async function replaceWriteOff(
     })) as WriteOff
     return { ok: true as const, writeOff: updated }
   })
+}
+
+export type UndoPreview = {
+  flip: Flip
+  kind: 'sale' | 'write-off'
+  hitchMarketplaceFee: number
+  hitchOutboundShipping: number
+  hitchSupplies: number
+}
+
+export async function loadUndoPreview(
+  db: AppDatabase,
+  input: { flipId: string; booksId: string },
+): Promise<UndoPreview | null> {
+  let flip = await findFlipInBooks(db, input)
+  if (!flip) {
+    return null
+  }
+  let standingSale = await loadStandingSaleForUndo(db, input)
+  if (standingSale) {
+    let share = typedMoneySharesForKit(standingSale.sale, standingSale.kit).get(flip.id)
+    if (!share) {
+      return null
+    }
+    return {
+      flip,
+      kind: 'sale',
+      hitchMarketplaceFee: share.marketplaceFee,
+      hitchOutboundShipping: share.outboundShipping,
+      hitchSupplies: share.supplies,
+    }
+  }
+  let standingWriteOff = await loadStandingWriteOffForUndo(db, input)
+  if (standingWriteOff) {
+    let share = typedMoneySharesForKit(
+      writeOffAsSaleMoney(standingWriteOff.writeOff),
+      standingWriteOff.kit,
+    ).get(flip.id)
+    if (!share) {
+      return null
+    }
+    return {
+      flip,
+      kind: 'write-off',
+      hitchMarketplaceFee: 0,
+      hitchOutboundShipping: share.outboundShipping,
+      hitchSupplies: share.supplies,
+    }
+  }
+  return null
+}
+
+export async function undoStandingForFlip(
+  db: AppDatabase,
+  input: { flipId: string; booksId: string },
+): Promise<{ ok: true } | { ok: false; error: string; status: number }> {
+  return db.transaction(async (tx) => {
+    let flip = await findFlipInBooks(tx, input)
+    if (!flip) {
+      return { ok: false, error: 'Not Found', status: 404 }
+    }
+
+    let standingSale = await loadStandingSaleForUndo(tx, input)
+    if (standingSale) {
+      let share = typedMoneySharesForKit(standingSale.sale, standingSale.kit).get(flip.id)
+      if (!share) {
+        return { ok: false, error: 'Not Found', status: 404 }
+      }
+      let sale = standingSale.sale
+      await tx.update(sales, sale.id, {
+        sale_price: sale.sale_price - share.salePrice,
+        buyer_paid_shipping: sale.buyer_paid_shipping - share.buyerPaidShipping,
+        marketplace_fee: sale.marketplace_fee - share.marketplaceFee,
+        outbound_shipping: sale.outbound_shipping - share.outboundShipping,
+        supplies: sale.supplies - share.supplies,
+      })
+      await tx.exec(sql`
+        update sale_flip
+        set
+          undone = true,
+          hitch_marketplace_fee = ${share.marketplaceFee},
+          hitch_outbound_shipping = ${share.outboundShipping},
+          hitch_supplies = ${share.supplies}
+        where sale_id = ${sale.id}
+          and flip_id = ${flip.id}
+          and books_id = ${input.booksId}
+          and undone = false
+      `)
+      return { ok: true as const }
+    }
+
+    let standingWriteOff = await loadStandingWriteOffForUndo(tx, input)
+    if (standingWriteOff) {
+      let share = typedMoneySharesForKit(
+        writeOffAsSaleMoney(standingWriteOff.writeOff),
+        standingWriteOff.kit,
+      ).get(flip.id)
+      if (!share) {
+        return { ok: false, error: 'Not Found', status: 404 }
+      }
+      let writeOff = standingWriteOff.writeOff
+      await tx.update(writeOffs, writeOff.id, {
+        outbound_shipping: writeOff.outbound_shipping - share.outboundShipping,
+        supplies: writeOff.supplies - share.supplies,
+      })
+      await tx.exec(sql`
+        update write_off_flip
+        set
+          undone = true,
+          hitch_marketplace_fee = 0,
+          hitch_outbound_shipping = ${share.outboundShipping},
+          hitch_supplies = ${share.supplies}
+        where write_off_id = ${writeOff.id}
+          and flip_id = ${flip.id}
+          and books_id = ${input.booksId}
+          and undone = false
+      `)
+      return { ok: true as const }
+    }
+
+    return { ok: false, error: 'Not Found', status: 404 }
+  })
+}
+
+async function loadStandingSaleForUndo(
+  db: AppDatabase,
+  input: { flipId: string; booksId: string },
+): Promise<{ sale: Sale; kit: KitFlip[] } | null> {
+  let result = await db.exec(sql`
+    select sale.id
+    from sale
+    join sale_flip on sale_flip.sale_id = sale.id
+    where sale_flip.flip_id = ${input.flipId}
+      and sale_flip.books_id = ${input.booksId}
+      and sale_flip.undone = false
+    limit 1
+  `)
+  let saleId = result.rows?.[0]?.id ? String(result.rows[0].id) : null
+  if (!saleId) {
+    return null
+  }
+  let sale = await findSaleInBooks(db, { saleId, booksId: input.booksId })
+  if (!sale) {
+    return null
+  }
+  return { sale, kit: await loadStandingKit(db, { saleId: sale.id, booksId: input.booksId }) }
+}
+
+async function loadStandingWriteOffForUndo(
+  db: AppDatabase,
+  input: { flipId: string; booksId: string },
+): Promise<{ writeOff: WriteOff; kit: KitFlip[] } | null> {
+  let result = await db.exec(sql`
+    select write_off.id
+    from write_off
+    join write_off_flip on write_off_flip.write_off_id = write_off.id
+    where write_off_flip.flip_id = ${input.flipId}
+      and write_off_flip.books_id = ${input.booksId}
+      and write_off_flip.undone = false
+    limit 1
+  `)
+  let writeOffId = result.rows?.[0]?.id ? String(result.rows[0].id) : null
+  if (!writeOffId) {
+    return null
+  }
+  let writeOff = await findWriteOffInBooks(db, { writeOffId, booksId: input.booksId })
+  if (!writeOff) {
+    return null
+  }
+  return {
+    writeOff,
+    kit: await loadStandingWriteOffKit(db, { writeOffId: writeOff.id, booksId: input.booksId }),
+  }
 }
 
 export async function loadWriteOffHub(
@@ -1634,7 +1969,10 @@ async function loadStandingFlipProfits(
     group.flipIds.push(String(row.flip_id))
   }
 
-  let listingSpend = await listingSpendByFlipId(db, booksId)
+  let [listingSpend, hitch] = await Promise.all([
+    listingSpendByFlipId(db, booksId),
+    hitchByFlipId(db, booksId),
+  ])
   let profits = new Map<string, FlipProfit>()
   for (let group of groups.values()) {
     let kit: KitFlip[] = []
@@ -1644,7 +1982,7 @@ async function loadStandingFlipProfits(
         kit.push({ flip, acquisitionCostCents: acquisitionCostCents(flip) })
       }
     }
-    let shares = profitSharesForKit(group.sale, kit, listingSpend)
+    let shares = profitSharesForKit(group.sale, kit, listingSpend, hitch)
     for (let [flipId, profitCents] of shares) {
       profits.set(flipId, { flipId, date: group.saleDate, profitCents, kind: 'sale' })
     }
@@ -1657,7 +1995,7 @@ async function loadStandingFlipProfits(
         kit.push({ flip, acquisitionCostCents: acquisitionCostCents(flip) })
       }
     }
-    let shares = profitSharesForKit(writeOffAsSaleMoney(group.writeOff), kit, listingSpend)
+    let shares = profitSharesForKit(writeOffAsSaleMoney(group.writeOff), kit, listingSpend, hitch)
     for (let [flipId, profitCents] of shares) {
       profits.set(flipId, { flipId, date: group.writeOffDate, profitCents, kind: 'write-off' })
     }
