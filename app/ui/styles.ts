@@ -240,6 +240,41 @@ export const inventoryItem = css({
   border: '1px solid var(--rule)',
   padding: '0.9rem 1rem',
   fontSize: '1.1rem',
+  '& a': {
+    color: 'var(--ink)',
+    textDecoration: 'none',
+  },
+})
+
+export const tagList = css({
+  listStyle: 'none',
+  margin: '0 0 0.75rem',
+  padding: 0,
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.4rem',
+})
+
+export const tagChip = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.35rem',
+  background: 'var(--ticket)',
+  border: '1px solid var(--rule)',
+  padding: '0.25rem 0.55rem',
+  fontSize: '0.95rem',
+  '& button': {
+    border: 0,
+    background: 'transparent',
+    color: 'var(--muted)',
+    cursor: 'pointer',
+    fontSize: '0.85rem',
+    padding: '0 0.15rem',
+  },
+})
+
+export const tagSection = css({
+  margin: '1.25rem 0',
 })
 
 export const ghostAction = css({

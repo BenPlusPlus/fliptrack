@@ -50,6 +50,8 @@ export async function createTestApp(
 }
 
 export async function resetBooks(db: AppDatabase): Promise<void> {
+  await db.exec(sql`delete from flip_tag`)
+  await db.exec(sql`delete from tag`)
   await db.exec(sql`delete from flip`)
   await db.exec(sql`delete from acquisition`)
   await db.exec(sql`delete from operator`)
@@ -104,6 +106,73 @@ export async function postForm(
     form.set(name, value)
   }
   return fetchPage(app, href, { method: 'POST', body: form })
+}
+
+export async function acquireFlip(
+  app: TestApp,
+  input: {
+    name: string
+    acquisitionDate?: string
+    acquisitionNotes?: string
+    taxPaid?: string
+    inboundShipping?: string
+    itemCost?: string
+    notes?: string
+    tag?: string
+  },
+): Promise<{ addHref: string; acquisitionId: string }> {
+  let start = await postForm(app, routes.acquisitions.new.index.href(), {
+    acquisition_date: input.acquisitionDate ?? '2026-08-22',
+    notes: input.acquisitionNotes ?? '',
+    tax_paid: input.taxPaid ?? '0',
+    inbound_shipping: input.inboundShipping ?? '0',
+  })
+  let addHref = start.headers.get('Location')
+  if (!addHref) {
+    throw new Error('Expected redirect to Add Flip')
+  }
+  let acquisitionId = addHref.match(/\/acquisitions\/([^/]+)\//)?.[1]
+  if (!acquisitionId) {
+    throw new Error(`Could not parse Acquisition id from ${addHref}`)
+  }
+  let fields: Record<string, string> = {
+    name: input.name,
+    item_cost: input.itemCost ?? '10',
+    notes: input.notes ?? '',
+  }
+  if (input.tag != null) {
+    fields.tag = input.tag
+  }
+  let saved = await postForm(app, addHref, fields)
+  if (saved.status >= 400) {
+    throw new Error(`Add Flip failed (${saved.status}): ${await readBody(saved)}`)
+  }
+  return { addHref, acquisitionId }
+}
+
+export function flipHrefFromInventory(html: string, name: string): string {
+  let escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let match = html.match(new RegExp(`href="(/flips/[^"]+)"[^>]*>\\s*${escaped}`))
+  if (!match) {
+    throw new Error(`Expected a Flip hub link for "${name}" in:\n${html.slice(0, 1500)}`)
+  }
+  return match[1]!
+}
+
+export async function postFormFrom(
+  app: TestApp,
+  csrfFromHref: string,
+  actionHref: string,
+  fields: Record<string, string>,
+): Promise<Response> {
+  let page = await fetchPage(app, csrfFromHref)
+  let html = await readBody(page)
+  let form = new FormData()
+  form.set('_csrf', csrfToken(html))
+  for (let [name, value] of Object.entries(fields)) {
+    form.set(name, value)
+  }
+  return fetchPage(app, actionHref, { method: 'POST', body: form })
 }
 
 export async function createOperatorViaOobe(

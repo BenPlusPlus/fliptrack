@@ -4,4 +4,5 @@ export type Sitting = {
   acquisitionId: string
   taxPaid: number
   inboundShipping: number
+  flipIds: string[]
 }

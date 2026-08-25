@@ -15,6 +15,11 @@ import oobeController from './actions/oobe/controller.tsx'
 import loginController from './actions/login/controller.tsx'
 import newAcquisitionController from './actions/acquisitions/new/controller.tsx'
 import addFlipController from './actions/acquisitions/addFlip/controller.tsx'
+import continueAcquisitionController from './actions/acquisitions/continue/controller.tsx'
+import flipsController from './actions/flips/controller.tsx'
+import resplitController from './actions/flips/resplit/controller.tsx'
+import tagsController from './actions/tags/controller.tsx'
+import deleteTagController from './actions/tags/delete/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadConfig } from './middleware/config.ts'
 import { loadDatabase } from './middleware/database.ts'
@@ -58,6 +63,11 @@ export function createApp(options: CreateAppOptions) {
   router.map(routes.login, loginController)
   router.map(routes.acquisitions.new, newAcquisitionController)
   router.map(routes.acquisitions.addFlip, addFlipController)
+  router.map(routes.acquisitions.continue, continueAcquisitionController)
+  router.map(routes.flips, flipsController)
+  router.map(routes.flips.resplit, resplitController)
+  router.map(routes.tags, tagsController)
+  router.map(routes.tags.delete, deleteTagController)
 
   return { router, db }
 }

@@ -5,11 +5,14 @@ import { redirect } from 'remix/response/redirect'
 
 import {
   addFlipAndSnapshotSitting,
+  attachNamedTagToFlip,
   findAcquisitionInBooks,
+  listTagsInBooks,
 } from '../../../data/queries.ts'
 import { databaseContext } from '../../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../../middleware/auth.ts'
+import type { Tag } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
 import {
@@ -39,11 +42,17 @@ export default createController(routes.acquisitions.addFlip, {
         return new Response('Not Found', { status: 404 })
       }
 
+      let bookTags = await listTagsInBooks(
+        mustGet(context.get(databaseContext), 'database'),
+        identity.booksId,
+      )
+
       return context.render(
         <AddFlipPage
           identity={identity}
           csrf={getCsrfToken(context)}
           acquisitionId={acquisition.id}
+          bookTags={bookTags}
         />,
       )
     },
@@ -63,7 +72,9 @@ export default createController(routes.acquisitions.addFlip, {
       let csrf = getCsrfToken(context)
       let name = String(formData.get('name') ?? '').trim()
       let notesRaw = String(formData.get('notes') ?? '').trim()
+      let tagName = String(formData.get('tag') ?? '').trim()
       let itemCost = parseCents(String(formData.get('item_cost') ?? ''), { required: true })
+      let bookTags = await listTagsInBooks(db, identity.booksId)
 
       if (name === '' || !itemCost.ok) {
         return context.render(
@@ -71,6 +82,7 @@ export default createController(routes.acquisitions.addFlip, {
             identity={identity}
             csrf={csrf}
             acquisitionId={acquisition.id}
+            bookTags={bookTags}
             error={
               name === ''
                 ? 'Flip name is required.'
@@ -82,27 +94,39 @@ export default createController(routes.acquisitions.addFlip, {
               name: String(formData.get('name') ?? ''),
               notes: notesRaw,
               itemCost: String(formData.get('item_cost') ?? ''),
+              tag: tagName,
             }}
           />,
           { status: 400 },
         )
       }
 
-      let sitting = sittingFor(
-        mustGet(context.get(Session), 'session').get(SITTING_KEY),
-        acquisition.id,
-      )
+      let session = mustGet(context.get(Session), 'session')
+      let sitting = sittingFor(session.get(SITTING_KEY), acquisition.id)
 
-      await addFlipAndSnapshotSitting(db, {
+      let created = await addFlipAndSnapshotSitting(db, {
         booksId: identity.booksId,
         acquisitionId: acquisition.id,
         name,
         ...(notesRaw === '' ? {} : { notes: notesRaw }),
         itemCost: itemCost.cents,
-        ...(sitting
-          ? { sitting: { taxPaid: sitting.taxPaid, inboundShipping: sitting.inboundShipping } }
-          : {}),
+        ...(sitting ? { sitting } : {}),
       })
+
+      if (sitting) {
+        session.set(SITTING_KEY, {
+          ...sitting,
+          flipIds: [...sitting.flipIds, created.id],
+        })
+      }
+
+      if (tagName !== '') {
+        await attachNamedTagToFlip(db, {
+          flipId: created.id,
+          booksId: identity.booksId,
+          name: tagName,
+        })
+      }
 
       return redirect(
         routes.acquisitions.addFlip.index.href({ acquisitionId: acquisition.id }),
@@ -119,7 +143,13 @@ function sittingFor(value: unknown, acquisitionId: string): Sitting | null {
     'acquisitionId' in value &&
     (value as Sitting).acquisitionId === acquisitionId
   ) {
-    return value as Sitting
+    let sitting = value as Sitting
+    return {
+      acquisitionId: sitting.acquisitionId,
+      taxPaid: sitting.taxPaid,
+      inboundShipping: sitting.inboundShipping,
+      flipIds: Array.isArray(sitting.flipIds) ? sitting.flipIds : [],
+    }
   }
   return null
 }
@@ -129,19 +159,20 @@ function AddFlipPage(handle: {
     identity: OperatorIdentity
     csrf: string
     acquisitionId: string
+    bookTags: Tag[]
     error?: string
-    values?: { name: string; notes: string; itemCost: string }
+    values?: { name: string; notes: string; itemCost: string; tag?: string }
   }
 }) {
   return () => {
-    let { identity, csrf, acquisitionId, error, values } = handle.props
+    let { identity, csrf, acquisitionId, bookTags, error, values } = handle.props
     let action = routes.acquisitions.addFlip.action.href({ acquisitionId })
 
     return (
       <AppShell title="Add Flip" identity={identity} hideNav>
         <h1 mix={heading}>Add a Flip</h1>
         <p mix={lead}>
-          Name and Item cost are required. Flip notes are skippable. Stay until you leave.
+          Name and Item cost are required. Flip notes and Tags are skippable. Stay until you leave.
         </p>
         {error ? <p mix={errorBanner}>{error}</p> : null}
         <form method="post" action={action} mix={fieldStack}>
@@ -168,8 +199,23 @@ function AddFlipPage(handle: {
           </label>
           <label mix={labelStyle}>
             Flip notes
-            <textarea name="notes" rows={3}></textarea>
+            <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
           </label>
+          <label mix={labelStyle}>
+            Tag
+            <input
+              type="text"
+              name="tag"
+              list="tag-names"
+              autoComplete="off"
+              defaultValue={values?.tag ?? ''}
+            />
+          </label>
+          <datalist id="tag-names">
+            {bookTags.map((tag) => (
+              <option key={tag.id} value={tag.name}></option>
+            ))}
+          </datalist>
           <button type="submit" mix={primaryAction}>
             Save Flip
           </button>

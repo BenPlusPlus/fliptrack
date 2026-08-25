@@ -4,7 +4,11 @@ import { redirect } from 'remix/response/redirect'
 import { getCsrfToken } from 'remix/middleware/csrf'
 
 import { assetServer } from '../assets.ts'
-import { inventoryAcquisitionCostCents, listInventory } from '../data/queries.ts'
+import {
+  inventoryAcquisitionCostCents,
+  listInventory,
+  listTagsInBooks,
+} from '../data/queries.ts'
 import { databaseContext } from '../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
@@ -37,11 +41,22 @@ export default createController(routes, {
       middleware: [requireOperator()],
       async handler(context) {
         let identity = operatorFrom(context)
-        let flips = await listInventory(
-          mustGet(context.get(databaseContext), 'database'),
-          identity.booksId,
+        let db = mustGet(context.get(databaseContext), 'database')
+        let name = context.url.searchParams.get('q') ?? ''
+        let untagged = context.url.searchParams.get('untagged') === '1'
+        let tagIds = untagged ? [] : context.url.searchParams.getAll('tag')
+        let [flips, bookTags] = await Promise.all([
+          listInventory(db, identity.booksId, { name, tagIds, untagged }),
+          listTagsInBooks(db, identity.booksId),
+        ])
+        return context.render(
+          <InventoryPage
+            identity={identity}
+            flips={flips}
+            bookTags={bookTags}
+            filter={{ name, tagIds, untagged }}
+          />,
         )
-        return context.render(<InventoryPage identity={identity} flips={flips} />)
       },
     },
 
@@ -49,7 +64,13 @@ export default createController(routes, {
       middleware: [requireOperator()],
       async handler(context) {
         let identity = operatorFrom(context)
-        return context.render(<AccountPage identity={identity} csrf={getCsrfToken(context)} />)
+        let tags = await listTagsInBooks(
+          mustGet(context.get(databaseContext), 'database'),
+          identity.booksId,
+        )
+        return context.render(
+          <AccountPage identity={identity} csrf={getCsrfToken(context)} tags={tags} />,
+        )
       },
     },
 
