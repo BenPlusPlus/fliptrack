@@ -117,7 +117,7 @@ function NewListingPage(handle: {
     let { identity, csrf, kit, error, values } = handle.props
 
     return (
-      <AppShell title="Listing" identity={identity} current="listings">
+      <AppShell title="Listing" identity={identity} csrf={csrf} current="listings">
         <h1 mix={heading}>Listing</h1>
         <p mix={lead}>The Flip set is fixed at save.</p>
         {error ? <p mix={errorBanner}>{error}</p> : null}
@@ -146,9 +146,11 @@ function NewListingPage(handle: {
             Notes
             <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
           </label>
-          <button type="submit" mix={primaryAction}>
-            Save Listing
-          </button>
+          {identity.inspecting ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Listing
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.inventory.href()} mix={ghostAction}>

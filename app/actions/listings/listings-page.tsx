@@ -14,14 +14,15 @@ import { formatCents } from '../../utils/cents.ts'
 export function ListingsPage(handle: {
   props: {
     identity: OperatorIdentity
+    csrf: string
     listings: ListingIndexRow[]
   }
 }) {
   return () => {
-    let { identity, listings } = handle.props
+    let { identity, csrf, listings } = handle.props
 
     return (
-      <AppShell title="Listings" identity={identity} current="listings">
+      <AppShell title="Listings" identity={identity} csrf={csrf} current="listings">
         <h1 mix={heading}>Listings</h1>
         {listings.length === 0 ? (
           <p mix={lead}>

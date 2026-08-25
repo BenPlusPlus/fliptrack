@@ -250,9 +250,10 @@ function FlipHubPage(handle: {
       error,
       values,
     } = handle.props
+    let readOnly = identity.inspecting != null
 
     return (
-      <AppShell title={flip.name} identity={identity} current="inventory">
+      <AppShell title={flip.name} identity={identity} csrf={csrf} current="inventory">
         <h1 mix={heading}>{values?.name ?? flip.name}</h1>
         {flip.retired ? <p mix={mutedNote}>Retired</p> : null}
         {parent ? (
@@ -306,11 +307,17 @@ function FlipHubPage(handle: {
               required
               defaultValue={values?.name ?? flip.name}
               autoComplete="off"
+              readOnly={readOnly}
             />
           </label>
           <label mix={labelStyle}>
             Notes
-            <textarea name="notes" rows={3} defaultValue={values?.notes ?? flip.notes ?? ''}></textarea>
+            <textarea
+              name="notes"
+              rows={3}
+              defaultValue={values?.notes ?? flip.notes ?? ''}
+              readOnly={readOnly}
+            ></textarea>
           </label>
           <label mix={labelStyle}>
             Item cost
@@ -320,7 +327,7 @@ function FlipHubPage(handle: {
               name="item_cost"
               required
               defaultValue={values?.itemCost ?? centsToInput(flip.item_cost)}
-              readOnly={inboundFrozen}
+              readOnly={inboundFrozen || readOnly}
             />
           </label>
           <label mix={labelStyle}>
@@ -330,7 +337,7 @@ function FlipHubPage(handle: {
               inputMode="decimal"
               name="tax_paid"
               defaultValue={values?.taxPaid ?? centsToInput(flip.tax_paid)}
-              readOnly={inboundFrozen}
+              readOnly={inboundFrozen || readOnly}
             />
           </label>
           <label mix={labelStyle}>
@@ -340,12 +347,14 @@ function FlipHubPage(handle: {
               inputMode="decimal"
               name="inbound_shipping"
               defaultValue={values?.inboundShipping ?? centsToInput(flip.inbound_shipping)}
-              readOnly={inboundFrozen}
+              readOnly={inboundFrozen || readOnly}
             />
           </label>
-          <button type="submit" mix={primaryAction}>
-            Save Flip
-          </button>
+          {readOnly ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Flip
+            </button>
+          )}
         </form>
         <section mix={tagSection}>
           <h2 mix={labelStyle}>Tags</h2>
@@ -354,67 +363,73 @@ function FlipHubPage(handle: {
               {tags.map((tag) => (
                 <li key={tag.id} mix={tagChip}>
                   {tag.name}
-                  <form
-                    method="post"
-                    action={routes.flips.removeTag.href({ flipId: flip.id, tagId: tag.id })}
-                  >
-                    <input type="hidden" name="_csrf" value={csrf} />
-                    <button type="submit" aria-label={`Remove ${tag.name}`}>
-                      ×
-                    </button>
-                  </form>
+                  {readOnly ? null : (
+                    <form
+                      method="post"
+                      action={routes.flips.removeTag.href({ flipId: flip.id, tagId: tag.id })}
+                    >
+                      <input type="hidden" name="_csrf" value={csrf} />
+                      <button type="submit" aria-label={`Remove ${tag.name}`}>
+                        ×
+                      </button>
+                    </form>
+                  )}
                 </li>
               ))}
             </ul>
           ) : (
             <p mix={mutedNote}>No Tags yet.</p>
           )}
-          <form
-            method="post"
-            action={routes.flips.addTag.href({ flipId: flip.id })}
-            mix={fieldStack}
-          >
-            <input type="hidden" name="_csrf" value={csrf} />
-            <label mix={labelStyle}>
-              Add Tag
-              <input
-                type="text"
-                name="tag"
-                list="tag-names"
-                autoComplete="off"
-                placeholder="Name a Tag"
-              />
-            </label>
-            <datalist id="tag-names">
-              {bookTags.map((tag) => (
-                <option key={tag.id} value={tag.name}></option>
-              ))}
-            </datalist>
-            <button type="submit" mix={ghostAction}>
-              Add Tag
-            </button>
-          </form>
+          {readOnly ? null : (
+            <form
+              method="post"
+              action={routes.flips.addTag.href({ flipId: flip.id })}
+              mix={fieldStack}
+            >
+              <input type="hidden" name="_csrf" value={csrf} />
+              <label mix={labelStyle}>
+                Add Tag
+                <input
+                  type="text"
+                  name="tag"
+                  list="tag-names"
+                  autoComplete="off"
+                  placeholder="Name a Tag"
+                />
+              </label>
+              <datalist id="tag-names">
+                {bookTags.map((tag) => (
+                  <option key={tag.id} value={tag.name}></option>
+                ))}
+              </datalist>
+              <button type="submit" mix={ghostAction}>
+                Add Tag
+              </button>
+            </form>
+          )}
         </section>
         <p mix={mutedNote}>Acquisition {String(acquisition.acquisition_date)}</p>
         {typeof acquisition.notes === 'string' && acquisition.notes !== '' ? (
           <p mix={mutedNote}>{acquisition.notes}</p>
         ) : null}
-        <p mix={leaveRow}>
-          <a
-            href={routes.acquisitions.continue.index.href({ acquisitionId: acquisition.id })}
-            mix={ghostAction}
-          >
-            Add Flips to this Acquisition
-          </a>
-        </p>
-        {standing ? (
+        {readOnly ? null : (
+          <p mix={leaveRow}>
+            <a
+              href={routes.acquisitions.continue.index.href({ acquisitionId: acquisition.id })}
+              mix={ghostAction}
+            >
+              Add Flips to this Acquisition
+            </a>
+          </p>
+        )}
+        {standing && !readOnly ? (
           <p mix={leaveRow}>
             <a href={routes.flips.undo.index.href({ flipId: flip.id })} mix={ghostAction}>
               Undo
             </a>
           </p>
         ) : null}
-        {isInventory ? (
+        {isInventory && !readOnly ? (
           <p mix={leaveRow}>
             <a
               href={`${routes.sales.new.index.href()}?flip=${flip.id}`}
@@ -424,7 +439,7 @@ function FlipHubPage(handle: {
             </a>
           </p>
         ) : null}
-        {mayWriteOff ? (
+        {mayWriteOff && !readOnly ? (
           <p mix={leaveRow}>
             <a
               href={`${routes.writeOffs.new.index.href()}?flip=${flip.id}`}
@@ -434,7 +449,7 @@ function FlipHubPage(handle: {
             </a>
           </p>
         ) : null}
-        {mayResplit ? (
+        {mayResplit && !readOnly ? (
           <p mix={leaveRow}>
             <a
               href={routes.flips.resplit.index.href({ flipId: flip.id })}
@@ -444,7 +459,7 @@ function FlipHubPage(handle: {
             </a>
           </p>
         ) : null}
-        {mayRemove ? (
+        {mayRemove && !readOnly ? (
           <form method="post" action={routes.flips.remove.href({ flipId: flip.id })}>
             <input type="hidden" name="_csrf" value={csrf} />
             <button type="submit" mix={ghostAction}>

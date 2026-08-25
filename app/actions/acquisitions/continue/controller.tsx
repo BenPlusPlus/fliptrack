@@ -135,7 +135,7 @@ function ContinueAcquisitionPage(handle: {
     let action = routes.acquisitions.continue.action.href({ acquisitionId: acquisition.id })
 
     return (
-      <AppShell title="Add Flips" identity={identity} hideNav>
+      <AppShell title="Add Flips" identity={identity} csrf={csrf} hideNav>
         <h1 mix={heading}>Add Flips to this Acquisition</h1>
         <p mix={lead}>
           Header Tax paid and Inbound shipping are this sitting only. They default to $0 and
@@ -179,9 +179,11 @@ function ContinueAcquisitionPage(handle: {
               defaultValue={values?.inboundShipping ?? '0'}
             />
           </label>
-          <button type="submit" mix={primaryAction}>
-            Add Flips
-          </button>
+          {identity.inspecting ? null : (
+            <button type="submit" mix={primaryAction}>
+              Add Flips
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.home.href()} mix={ghostAction}>

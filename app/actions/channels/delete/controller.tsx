@@ -55,19 +55,21 @@ function DeleteChannelPage(handle: {
   return () => {
     let { identity, csrf, channel } = handle.props
     return (
-      <AppShell title="Delete Channel" identity={identity} current="account">
+      <AppShell title="Delete Channel" identity={identity} csrf={csrf} current="account">
         <h1 mix={heading}>Delete {channel.name}?</h1>
         <p mix={lead}>Delete is refused if any Sale references this Channel.</p>
-        <form
-          method="post"
-          action={routes.channels.delete.action.href({ channelId: channel.id })}
-          mix={fieldStack}
-        >
-          <input type="hidden" name="_csrf" value={csrf} />
-          <button type="submit" mix={primaryAction}>
-            Delete Channel
-          </button>
-        </form>
+        {identity.inspecting ? null : (
+          <form
+            method="post"
+            action={routes.channels.delete.action.href({ channelId: channel.id })}
+            mix={fieldStack}
+          >
+            <input type="hidden" name="_csrf" value={csrf} />
+            <button type="submit" mix={primaryAction}>
+              Delete Channel
+            </button>
+          </form>
+        )}
         <p mix={leaveRow}>
           <a href={routes.account.href()} mix={ghostAction}>
             Cancel

@@ -92,6 +92,62 @@ export async function replaceInstanceAdminPassword(
   })
 }
 
+export async function getSignupOpen(db: AppDatabase): Promise<boolean> {
+  let result = await db.exec(sql`
+    select signup_open
+    from instance_settings
+    where singleton = true
+    limit 1
+  `)
+  return Boolean(result.rows?.[0]?.signup_open)
+}
+
+export async function setSignupOpen(db: AppDatabase, open: boolean): Promise<void> {
+  await db.exec(sql`
+    update instance_settings
+    set signup_open = ${open}
+    where singleton = true
+  `)
+}
+
+export async function listOperatorsByEmail(db: AppDatabase): Promise<Operator[]> {
+  return db.findMany(operators, { orderBy: ['email', 'asc'] })
+}
+
+export async function createOperator(
+  db: AppDatabase,
+  input: { email: string; passwordHash: string },
+): Promise<Operator> {
+  return db.transaction(async (tx) => {
+    let booksId = crypto.randomUUID()
+    await tx.create(books, { id: booksId })
+    return tx.create(
+      operators,
+      {
+        id: crypto.randomUUID(),
+        email: input.email,
+        password_hash: input.passwordHash,
+        instance_admin: false,
+        must_change_password: false,
+        credentials_changed_at: new Date(),
+        books_id: booksId,
+      },
+      { returnRow: true },
+    )
+  })
+}
+
+export async function replaceOperatorPassword(
+  db: AppDatabase,
+  input: { operatorId: string; passwordHash: string; mustChangePassword: boolean },
+): Promise<Operator> {
+  return db.update(operators, input.operatorId, {
+    password_hash: input.passwordHash,
+    credentials_changed_at: new Date(),
+    must_change_password: input.mustChangePassword,
+  })
+}
+
 export async function createAcquisition(
   db: AppDatabase,
   input: { booksId: string; acquisitionDate: string; notes?: string },

@@ -169,7 +169,7 @@ function AddFlipPage(handle: {
     let action = routes.acquisitions.addFlip.action.href({ acquisitionId })
 
     return (
-      <AppShell title="Add Flip" identity={identity} hideNav>
+      <AppShell title="Add Flip" identity={identity} csrf={csrf} hideNav>
         <h1 mix={heading}>Add a Flip</h1>
         <p mix={lead}>
           Name and Item cost are required. Flip notes and Tags are skippable. Stay until you leave.
@@ -216,9 +216,11 @@ function AddFlipPage(handle: {
               <option key={tag.id} value={tag.name}></option>
             ))}
           </datalist>
-          <button type="submit" mix={primaryAction}>
-            Save Flip
-          </button>
+          {identity.inspecting ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Flip
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.home.href()} mix={ghostAction}>

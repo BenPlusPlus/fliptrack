@@ -108,6 +108,32 @@ export const stampAmount = css({
   lineHeight: 0.95,
 })
 
+export const inspectBanner = css({
+  background: '#f3d2c8',
+  border: '1px solid var(--stamp)',
+  color: 'var(--danger)',
+  padding: '0.75rem 0.9rem',
+  margin: '0 0 1rem',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.75rem',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  fontSize: '0.95rem',
+  '& button': {
+    background: 'transparent',
+    color: 'var(--ink)',
+    border: '1px solid var(--ink)',
+    fontFamily: FONT_BODY,
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    fontSize: '0.75rem',
+    padding: '0.45rem 0.7rem',
+    cursor: 'pointer',
+  },
+})
+
 export const bottomNav = css({
   position: 'fixed',
   left: 0,
@@ -131,6 +157,10 @@ export const bottomNav = css({
   '& a[aria-current="page"]': {
     boxShadow: 'inset 0 3px 0 var(--stamp)',
   },
+})
+
+export const bottomNavAdmin = css({
+  gridTemplateColumns: 'repeat(5, 1fr)',
 })
 
 export const primaryAction = css({

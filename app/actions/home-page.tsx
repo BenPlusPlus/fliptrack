@@ -23,6 +23,7 @@ import {
 export function HomePage(handle: {
   props: {
     identity: OperatorIdentity
+    csrf: string
     pnl: HomePnl
     window: ProfitWindowKind
     today: string
@@ -30,10 +31,11 @@ export function HomePage(handle: {
   }
 }) {
   return () => {
-    let { identity, pnl, window: selected, today, weekStart } = handle.props
+    let { identity, csrf, pnl, window: selected, today, weekStart } = handle.props
+    let readOnly = identity.inspecting != null
 
     return (
-      <AppShell title="Home" identity={identity} current="home">
+      <AppShell title="Home" identity={identity} csrf={csrf} current="home">
         <p mix={sectionLabel}>Profit</p>
         <div mix={profitGrid}>
           <ProfitStamp
@@ -77,11 +79,13 @@ export function HomePage(handle: {
             </ul>
           </section>
         ) : null}
-        <p mix={ctaRow}>
-          <a href={routes.acquisitions.new.index.href()} mix={primaryAction}>
-            New Acquisition
-          </a>
-        </p>
+        {readOnly ? null : (
+          <p mix={ctaRow}>
+            <a href={routes.acquisitions.new.index.href()} mix={primaryAction}>
+              New Acquisition
+            </a>
+          </p>
+        )}
         <script>
           {`(function(){var u=new URL(location.href);if(u.searchParams.get('today'))return;var d=new Date();var m=String(d.getMonth()+1).padStart(2,'0');var day=String(d.getDate()).padStart(2,'0');u.searchParams.set('today',d.getFullYear()+'-'+m+'-'+day);var weekStart=0;try{var loc=new Intl.Locale(navigator.language);var info=loc.weekInfo||(loc.getWeekInfo&&loc.getWeekInfo());if(info&&info.firstDay!=null){weekStart=info.firstDay===7?0:info.firstDay;}}catch(e){}u.searchParams.set('weekStart',String(weekStart));location.replace(u.pathname+u.search);})();`}
         </script>

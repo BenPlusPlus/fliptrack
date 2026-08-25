@@ -13,6 +13,8 @@ import { createAppDatabase, type AppDatabase } from './data/db.ts'
 import rootController from './actions/controller.tsx'
 import oobeController from './actions/oobe/controller.tsx'
 import loginController from './actions/login/controller.tsx'
+import passwordController from './actions/password/controller.tsx'
+import adminController from './actions/admin/controller.tsx'
 import newAcquisitionController from './actions/acquisitions/new/controller.tsx'
 import addFlipController from './actions/acquisitions/addFlip/controller.tsx'
 import continueAcquisitionController from './actions/acquisitions/continue/controller.tsx'
@@ -29,7 +31,12 @@ import writeOffsController from './actions/writeOffs/controller.tsx'
 import newWriteOffController from './actions/writeOffs/new/controller.tsx'
 import listingsController from './actions/listings/controller.tsx'
 import newListingController from './actions/listings/new/controller.tsx'
-import { loadAuth } from './middleware/auth.ts'
+import {
+  loadAuth,
+  loadInspect,
+  refuseInspectorMutations,
+  requireStandingPassword,
+} from './middleware/auth.ts'
 import { loadConfig } from './middleware/config.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { render } from './middleware/render.tsx'
@@ -61,6 +68,9 @@ export function createApp(options: CreateAppOptions) {
     loadDatabase(db),
     loadConfig({ setupSecret: options.setupSecret }),
     loadAuth(),
+    loadInspect(),
+    refuseInspectorMutations(),
+    requireStandingPassword(),
   )
 
   type AppContext = MiddlewareContext<typeof middleware>
@@ -70,6 +80,8 @@ export function createApp(options: CreateAppOptions) {
   router.map(routes, rootController)
   router.map(routes.oobe, oobeController)
   router.map(routes.login, loginController)
+  router.map(routes.password, passwordController)
+  router.map(routes.admin, adminController)
   router.map(routes.acquisitions.new, newAcquisitionController)
   router.map(routes.acquisitions.addFlip, addFlipController)
   router.map(routes.acquisitions.continue, continueAcquisitionController)

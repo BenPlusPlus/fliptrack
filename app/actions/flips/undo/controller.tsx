@@ -63,7 +63,7 @@ function UndoPage(handle: {
   return () => {
     let { identity, csrf, preview } = handle.props
     return (
-      <AppShell title="Undo" identity={identity} current="inventory">
+      <AppShell title="Undo" identity={identity} csrf={csrf} current="inventory">
         <h1 mix={heading}>Undo</h1>
         <p mix={lead}>
           {preview.flip.name}. Marketplace fee, Outbound shipping, and Supplies hitch. Proceeds do
@@ -72,16 +72,18 @@ function UndoPage(handle: {
         <p mix={mutedNote}>Marketplace fee {formatCents(preview.hitchMarketplaceFee)}</p>
         <p mix={mutedNote}>Outbound shipping {formatCents(preview.hitchOutboundShipping)}</p>
         <p mix={mutedNote}>Supplies {formatCents(preview.hitchSupplies)}</p>
-        <form
-          method="post"
-          action={routes.flips.undo.action.href({ flipId: preview.flip.id })}
-          mix={fieldStack}
-        >
-          <input type="hidden" name="_csrf" value={csrf} />
-          <button type="submit" mix={primaryAction}>
-            Undo
-          </button>
-        </form>
+        {identity.inspecting ? null : (
+          <form
+            method="post"
+            action={routes.flips.undo.action.href({ flipId: preview.flip.id })}
+            mix={fieldStack}
+          >
+            <input type="hidden" name="_csrf" value={csrf} />
+            <button type="submit" mix={primaryAction}>
+              Undo
+            </button>
+          </form>
+        )}
         <p mix={leaveRow}>
           <a href={routes.flips.show.href({ flipId: preview.flip.id })} mix={ghostAction}>
             Flip

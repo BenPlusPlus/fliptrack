@@ -5,10 +5,12 @@ import { routes } from '../../routes.ts'
 import {
   TEST_EMAIL,
   TEST_PASSWORD,
+  TEST_SETUP_SECRET,
   createOperatorViaOobe,
   createTestApp,
   fetchFollow,
   fetchPage,
+  login,
   postForm,
   readBody,
   resetBooks,
@@ -74,6 +76,45 @@ describe('first-run /oobe', () => {
       let response = await fetchPage(app, routes.oobe.index.href())
       assert.equal(response.status, 303)
       assert.equal(response.headers.get('Location'), routes.login.index.href())
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('resets the existing instance-admin standing password and does not create a second Operator', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      app.jar.clear()
+
+      let reset = await postForm(app, routes.oobe.index.href(), {
+        setup_secret: TEST_SETUP_SECRET,
+        password: 'break-glass-standing',
+      })
+      assert.equal(reset.status, 303)
+      assert.equal(reset.headers.get('Location'), routes.home.href())
+
+      let home = await fetchFollow(app, routes.home.href())
+      assert.equal(home.status, 200)
+      let html = await readBody(home)
+      assert.match(html, /This Week/)
+      assert.doesNotMatch(html, /Change your password/)
+
+      app.jar.clear()
+      let oldPassword = await postForm(app, routes.login.index.href(), {
+        email: TEST_EMAIL,
+        password: TEST_PASSWORD,
+      })
+      assert.equal(oldPassword.status, 400)
+
+      let fresh = await login(app, { email: TEST_EMAIL, password: 'break-glass-standing' })
+      assert.equal(fresh.status, 303)
+      assert.equal(fresh.headers.get('Location'), routes.home.href())
+
+      let admin = await fetchPage(app, routes.admin.index.href())
+      let adminHtml = await readBody(admin)
+      assert.match(adminHtml, new RegExp(TEST_EMAIL))
+      assert.doesNotMatch(adminHtml, /second@example.com/)
     } finally {
       await app.db.close()
     }

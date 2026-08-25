@@ -37,9 +37,10 @@ export function SalePage(handle: {
       handle.props
     let checked = new Set(selectedFlipIds ?? kit.map((row) => row.flip.id))
     let flipRows = includeFlipIds ? (inventory ?? kit) : kit
+    let readOnly = identity.inspecting != null
 
     return (
-      <AppShell title="Sale" identity={identity} current="inventory">
+      <AppShell title="Sale" identity={identity} csrf={csrf} current="inventory">
         <h1 mix={heading}>Sale</h1>
         <p mix={lead}>One Sale for the kit. Acquisition cost is the weight.</p>
         {error ? <p mix={errorBanner}>{error}</p> : null}
@@ -61,8 +62,12 @@ export function SalePage(handle: {
                 ) : (
                   <>
                     {row.flip.name} — Acquisition cost {formatCents(row.acquisitionCostCents)}
-                    {' · '}
-                    <a href={routes.flips.undo.index.href({ flipId: row.flip.id })}>Undo</a>
+                    {readOnly ? null : (
+                      <>
+                        {' · '}
+                        <a href={routes.flips.undo.index.href({ flipId: row.flip.id })}>Undo</a>
+                      </>
+                    )}
                   </>
                 )}
               </li>
@@ -143,9 +148,11 @@ export function SalePage(handle: {
             Notes
             <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
           </label>
-          <button type="submit" mix={primaryAction}>
-            Save Sale
-          </button>
+          {readOnly ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Sale
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.inventory.href()} mix={ghostAction}>

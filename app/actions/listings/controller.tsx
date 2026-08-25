@@ -25,7 +25,9 @@ export default createController(routes.listings, {
         mustGet(context.get(databaseContext), 'database'),
         identity.booksId,
       )
-      return context.render(<ListingsPage identity={identity} listings={listings} />)
+      return context.render(
+        <ListingsPage identity={identity} csrf={getCsrfToken(context)} listings={listings} />,
+      )
     },
 
     async show(context) {

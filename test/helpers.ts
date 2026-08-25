@@ -14,6 +14,8 @@ export const TEST_SETUP_SECRET = 'test-setup-secret'
 export const TEST_SESSION_SECRET = 'test-session-secret'
 export const TEST_EMAIL = 'operator@example.com'
 export const TEST_PASSWORD = 'correct-horse-battery'
+export const SECOND_EMAIL = 'second@example.com'
+export const SECOND_PASSWORD = 'second-horse-battery'
 
 type PostgresInfo = {
   connectionString: string
@@ -63,6 +65,7 @@ export async function resetBooks(db: AppDatabase): Promise<void> {
   await db.exec(sql`delete from acquisition`)
   await db.exec(sql`delete from operator`)
   await db.exec(sql`delete from books`)
+  await db.exec(sql`update instance_settings set signup_open = false`)
 }
 
 export async function fetchPage(
@@ -206,6 +209,49 @@ export async function login(
     email: input.email ?? TEST_EMAIL,
     password: input.password ?? TEST_PASSWORD,
   })
+}
+
+export async function openSignup(app: TestApp): Promise<Response> {
+  return postFormFrom(app, routes.admin.index.href(), routes.admin.signup.href(), {
+    signup_open: '1',
+  })
+}
+
+export async function signupOperator(
+  app: TestApp,
+  input: { email?: string; password?: string } = {},
+): Promise<Response> {
+  return postFormFrom(app, routes.login.index.href(), routes.login.signup.href(), {
+    email: input.email ?? SECOND_EMAIL,
+    password: input.password ?? SECOND_PASSWORD,
+  })
+}
+
+export function copyJar(jar: Map<string, string>): Map<string, string> {
+  return new Map(jar)
+}
+
+export function adminActionHref(
+  html: string,
+  email: string,
+  kind: 'inspect' | 'password',
+): string {
+  let escaped = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let match = html.match(
+    new RegExp(`${escaped}[\\s\\S]{0,1200}?action="(/admin/operators/[^"]+/${kind})"`),
+  )
+  if (!match) {
+    throw new Error(`Expected ${kind} action for ${email} in:\n${html.slice(0, 2000)}`)
+  }
+  return match[1]!
+}
+
+export function revealedTempPassword(html: string): string {
+  let match = html.match(/id="temp-password"[^>]*value="([^"]+)"/)
+  if (!match) {
+    throw new Error(`Expected a revealed temporary password in:\n${html.slice(0, 2000)}`)
+  }
+  return match[1]!
 }
 
 export async function fetchFollow(app: TestApp, href: string, init?: RequestInit): Promise<Response> {

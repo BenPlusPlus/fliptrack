@@ -171,7 +171,7 @@ function ResplitPage(handle: {
     let preview = childPreviews(parent, rows)
 
     return (
-      <AppShell title="Re-split" identity={identity} current="inventory">
+      <AppShell title="Re-split" identity={identity} csrf={csrf} current="inventory">
         <h1 mix={heading}>Re-split {parent.name}</h1>
         <p mix={lead}>
           Child Item costs must sum to {formatCents(parent.item_cost)}. Resulting Acquisition costs
@@ -214,9 +214,11 @@ function ResplitPage(handle: {
               </p>
             </fieldset>
           ))}
-          <button type="submit" mix={primaryAction}>
-            Save Re-split
-          </button>
+          {identity.inspecting ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Re-split
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.flips.show.href({ flipId: parent.id })} mix={ghostAction}>

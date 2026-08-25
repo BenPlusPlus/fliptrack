@@ -35,9 +35,10 @@ export function WriteOffPage(handle: {
       handle.props
     let checked = new Set(selectedFlipIds ?? kit.map((row) => row.flip.id))
     let flipRows = includeFlipIds ? (inventory ?? kit) : kit
+    let readOnly = identity.inspecting != null
 
     return (
-      <AppShell title="Write-off" identity={identity} current="inventory">
+      <AppShell title="Write-off" identity={identity} csrf={csrf} current="inventory">
         <h1 mix={heading}>Write-off</h1>
         <p mix={lead}>One Write-off for the kit. Acquisition cost is the weight.</p>
         {error ? <p mix={errorBanner}>{error}</p> : null}
@@ -59,8 +60,12 @@ export function WriteOffPage(handle: {
                 ) : (
                   <>
                     {row.flip.name} — Acquisition cost {formatCents(row.acquisitionCostCents)}
-                    {' · '}
-                    <a href={routes.flips.undo.index.href({ flipId: row.flip.id })}>Undo</a>
+                    {readOnly ? null : (
+                      <>
+                        {' · '}
+                        <a href={routes.flips.undo.index.href({ flipId: row.flip.id })}>Undo</a>
+                      </>
+                    )}
                   </>
                 )}
               </li>
@@ -98,9 +103,11 @@ export function WriteOffPage(handle: {
             Notes
             <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
           </label>
-          <button type="submit" mix={primaryAction}>
-            Save Write-off
-          </button>
+          {readOnly ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Write-off
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.inventory.href()} mix={ghostAction}>

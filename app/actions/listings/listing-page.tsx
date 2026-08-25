@@ -44,6 +44,7 @@ export function ListingPage(handle: {
       error,
       values,
     } = handle.props
+    let readOnly = identity.inspecting != null
     let recordHref =
       remainingInventory.length > 0
         ? `${routes.sales.new.index.href()}?${remainingInventory
@@ -52,7 +53,7 @@ export function ListingPage(handle: {
         : null
 
     return (
-      <AppShell title={title} identity={identity} current="listings">
+      <AppShell title={title} identity={identity} csrf={csrf} current="listings">
         <h1 mix={heading}>{title}</h1>
         <p mix={lead}>{ended ? 'ended' : 'live'}</p>
         {error ? <p mix={errorBanner}>{error}</p> : null}
@@ -76,25 +77,32 @@ export function ListingPage(handle: {
               inputMode="decimal"
               name="listing_spend"
               defaultValue={values?.listingSpend ?? centsToInput(listing.listing_spend)}
-              readOnly={spendFrozen}
+              readOnly={spendFrozen || readOnly}
             />
           </label>
           <label mix={labelStyle}>
             Notes
-            <textarea name="notes" rows={3} defaultValue={values?.notes ?? listing.notes ?? ''}></textarea>
+            <textarea
+              name="notes"
+              rows={3}
+              defaultValue={values?.notes ?? listing.notes ?? ''}
+              readOnly={readOnly}
+            ></textarea>
           </label>
-          <button type="submit" mix={primaryAction}>
-            Save Listing
-          </button>
+          {readOnly ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Listing
+            </button>
+          )}
         </form>
-        {recordHref ? (
+        {recordHref && !readOnly ? (
           <p mix={leaveRow}>
             <a href={recordHref} mix={ghostAction}>
               Record Sale
             </a>
           </p>
         ) : null}
-        {ended ? null : (
+        {ended || readOnly ? null : (
           <form method="post" action={routes.listings.end.href({ listingId: listing.id })}>
             <input type="hidden" name="_csrf" value={csrf} />
             <p mix={leaveRow}>

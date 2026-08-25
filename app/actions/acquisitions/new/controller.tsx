@@ -108,7 +108,7 @@ function NewAcquisitionPage(handle: {
     let { identity, csrf, error, values } = handle.props
 
     return (
-      <AppShell title="New Acquisition" identity={identity} hideNav>
+      <AppShell title="New Acquisition" identity={identity} csrf={csrf} hideNav>
         <h1 mix={heading}>New Acquisition</h1>
         <p mix={lead}>
           Date defaults to today. Change it for opening stock. Then add Flips one at a time.
@@ -148,9 +148,11 @@ function NewAcquisitionPage(handle: {
               defaultValue={values?.inboundShipping ?? '0'}
             />
           </label>
-          <button type="submit" mix={primaryAction}>
-            Add Flips
-          </button>
+          {identity.inspecting ? null : (
+            <button type="submit" mix={primaryAction}>
+              Add Flips
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.home.href()} mix={ghostAction}>

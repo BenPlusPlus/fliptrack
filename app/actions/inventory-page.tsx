@@ -18,6 +18,7 @@ import {
 export function InventoryPage(handle: {
   props: {
     identity: OperatorIdentity
+    csrf: string
     flips: Flip[]
     bookTags: Tag[]
     filter: { name: string; tagIds: string[]; untagged: boolean }
@@ -25,14 +26,15 @@ export function InventoryPage(handle: {
   }
 }) {
   return () => {
-    let { identity, flips, bookTags, filter, segment } = handle.props
+    let { identity, csrf, flips, bookTags, filter, segment } = handle.props
     let selected = new Set(filter.tagIds)
     let sold = segment === 'sold'
     let writtenOff = segment === 'written-off'
     let title = sold ? 'Sold' : writtenOff ? 'Written-off' : 'Inventory'
+    let readOnly = identity.inspecting != null
 
     return (
-      <AppShell title={title} identity={identity} current="inventory">
+      <AppShell title={title} identity={identity} csrf={csrf} current="inventory">
         <h1 mix={heading}>{title}</h1>
         <p>
           <a
@@ -112,7 +114,9 @@ export function InventoryPage(handle: {
             ) : (
               <>
                 Nothing in Inventory yet.{' '}
-                <a href={routes.acquisitions.new.index.href()}>New Acquisition</a>
+                {readOnly ? null : (
+                  <a href={routes.acquisitions.new.index.href()}>New Acquisition</a>
+                )}
               </>
             )}
           </p>
@@ -125,6 +129,15 @@ export function InventoryPage(handle: {
             ))}
           </ol>
         ) : (
+          readOnly ? (
+            <ol mix={inventoryList} id="inventory-list">
+              {flips.map((flip) => (
+                <li key={flip.id} mix={inventoryItem} data-name={flip.name}>
+                  <a href={routes.flips.show.href({ flipId: flip.id })}>{flip.name}</a>
+                </li>
+              ))}
+            </ol>
+          ) : (
           <form method="get" action={routes.sales.new.index.href()}>
             <ol mix={inventoryList} id="inventory-list">
               {flips.map((flip) => (
@@ -156,12 +169,15 @@ export function InventoryPage(handle: {
               </button>
             </p>
           </form>
+          )
         )}
-        <p mix={ctaRow}>
-          <a href={routes.acquisitions.new.index.href()} mix={primaryAction}>
-            New Acquisition
-          </a>
-        </p>
+        {readOnly ? null : (
+          <p mix={ctaRow}>
+            <a href={routes.acquisitions.new.index.href()} mix={primaryAction}>
+              New Acquisition
+            </a>
+          </p>
+        )}
         <script>
           {`(function(){var i=document.getElementById('inventory-name-filter');var list=document.getElementById('inventory-list')||document.getElementById('sold-list')||document.getElementById('written-off-list');if(!i||!list)return;i.addEventListener('input',function(){var q=i.value.trim().toLowerCase();for(var n=0;n<list.children.length;n++){var li=list.children[n];var name=(li.getAttribute('data-name')||'').toLowerCase();li.hidden=q!==''&&name.indexOf(q)===-1;}});})();`}
         </script>

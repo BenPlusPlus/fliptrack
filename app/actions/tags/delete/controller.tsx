@@ -55,19 +55,21 @@ function DeleteTagPage(handle: {
   return () => {
     let { identity, csrf, tag } = handle.props
     return (
-      <AppShell title="Delete Tag" identity={identity} current="account">
+      <AppShell title="Delete Tag" identity={identity} csrf={csrf} current="account">
         <h1 mix={heading}>Delete {tag.name}?</h1>
         <p mix={lead}>This strips the Tag from every Flip. The Tag is then gone from the Books.</p>
-        <form
-          method="post"
-          action={routes.tags.delete.action.href({ tagId: tag.id })}
-          mix={fieldStack}
-        >
-          <input type="hidden" name="_csrf" value={csrf} />
-          <button type="submit" mix={primaryAction}>
-            Delete Tag
-          </button>
-        </form>
+        {identity.inspecting ? null : (
+          <form
+            method="post"
+            action={routes.tags.delete.action.href({ tagId: tag.id })}
+            mix={fieldStack}
+          >
+            <input type="hidden" name="_csrf" value={csrf} />
+            <button type="submit" mix={primaryAction}>
+              Delete Tag
+            </button>
+          </form>
+        )}
         <p mix={leaveRow}>
           <a href={routes.account.href()} mix={ghostAction}>
             Cancel
