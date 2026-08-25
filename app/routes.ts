@@ -21,6 +21,13 @@ export const routes = route({
     rename: post('/'),
     delete: form('delete'),
   }),
+  listings: {
+    index: '/listings',
+    new: form('/listings/new'),
+    show: get('/listings/:listingId'),
+    update: post('/listings/:listingId'),
+    end: post('/listings/:listingId/end'),
+  },
   sales: {
     new: form('/sales/new'),
     show: get('/sales/:saleId'),

@@ -128,6 +128,13 @@ export function InventoryPage(handle: {
               <button type="submit" mix={primaryAction}>
                 Sold
               </button>
+              <button
+                type="submit"
+                formaction={routes.listings.new.index.href()}
+                mix={ghostAction}
+              >
+                Listing
+              </button>
             </p>
           </form>
         )}

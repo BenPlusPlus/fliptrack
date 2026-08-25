@@ -7,12 +7,14 @@ import {
   channels,
   flipTags,
   flips,
+  listingFlips,
+  listings,
   operators,
   saleFlips,
   sales,
   tags,
 } from './schema.ts'
-import type { Acquisition, Channel, Flip, Operator, Sale, Tag } from './schema.ts'
+import type { Acquisition, Channel, Flip, Listing, Operator, Sale, Tag } from './schema.ts'
 import { allocateShares } from '../utils/cents.ts'
 import {
   dateInWindow,
@@ -357,7 +359,11 @@ export async function loadFlipHub(
     loadStandingSaleForFlip(db, input),
   ])
   let inboundFrozen = flip.retired || standing != null
-  let mayRemove = await unusedFlipMayBeRemoved(db, flip)
+  let [mayRemove, hasLiveListing] = await Promise.all([
+    unusedFlipMayBeRemoved(db, flip),
+    flipHasLiveListing(db, flip.id),
+  ])
+  let isInventory = !flip.retired && standing == null
   return {
     flip,
     acquisition,
@@ -367,7 +373,8 @@ export async function loadFlipHub(
     standing,
     inboundFrozen,
     mayRemove,
-    isInventory: !flip.retired && standing == null,
+    isInventory,
+    mayResplit: isInventory && !hasLiveListing,
   }
 }
 
@@ -387,6 +394,9 @@ export async function resplitFlip(
     }
     if (await flipHasStandingSale(tx, parent.id)) {
       return { ok: false, error: 'A Flip with a standing Sale cannot be re-split.' }
+    }
+    if (await flipHasLiveListing(tx, parent.id)) {
+      return { ok: false, error: 'A live Listing blocks Re-split. End the Listing first.' }
     }
     if (input.children.length < 2) {
       return { ok: false, error: 'Re-split needs at least two children.' }
@@ -450,7 +460,10 @@ export async function unusedFlipMayBeRemoved(
     where flip_id = ${flip.id}
     limit 1
   `)
-  return (result.rows?.length ?? 0) === 0
+  if ((result.rows?.length ?? 0) > 0) {
+    return false
+  }
+  return !(await flipHasListingMembership(db, flip.id))
 }
 
 export async function findTagInBooks(
@@ -468,6 +481,9 @@ export async function removeUnusedFlip(
     let flip = await findFlipInBooks(tx, { flipId: input.flipId, booksId: input.booksId })
     if (!flip) {
       return { ok: false, error: 'Not Found', status: 404 }
+    }
+    if (await flipHasListingMembership(tx, flip.id)) {
+      return { ok: false, error: 'A Flip on a Listing cannot be removed.', status: 400 }
     }
     if (!(await unusedFlipMayBeRemoved(tx, flip))) {
       return { ok: false, error: 'This Flip cannot be removed.', status: 400 }
@@ -713,11 +729,11 @@ export type KitFlip = {
 
 export async function loadKitFlips(
   db: AppDatabase,
-  input: { booksId: string; flipIds: string[] },
+  input: { booksId: string; flipIds: string[]; emptyError?: string },
 ): Promise<{ ok: true; kit: KitFlip[] } | { ok: false; error: string; status: number }> {
   let uniqueIds = [...new Set(input.flipIds.filter(Boolean))]
   if (uniqueIds.length === 0) {
-    return { ok: false, error: 'Pick Inventory Flips to sell.', status: 400 }
+    return { ok: false, error: input.emptyError ?? 'Pick Inventory Flips to sell.', status: 400 }
   }
 
   let kit: KitFlip[] = []
@@ -733,6 +749,329 @@ export async function loadKitFlips(
   }
   kit.sort((a, b) => a.flip.name.localeCompare(b.flip.name) || a.flip.id.localeCompare(b.flip.id))
   return { ok: true, kit }
+}
+
+export async function findListingInBooks(
+  db: AppDatabase,
+  input: { listingId: string; booksId: string },
+): Promise<Listing | null> {
+  return db.findOne(listings, { where: { id: input.listingId, books_id: input.booksId } })
+}
+
+export async function flipHasListingMembership(db: AppDatabase, flipId: string): Promise<boolean> {
+  let result = await db.exec(sql`
+    select 1
+    from listing_flip
+    where flip_id = ${flipId}
+    limit 1
+  `)
+  return (result.rows?.length ?? 0) > 0
+}
+
+export async function flipHasLiveListing(db: AppDatabase, flipId: string): Promise<boolean> {
+  let result = await db.exec(sql`
+    select 1
+    from listing_flip
+    join listing on listing.id = listing_flip.listing_id
+    where listing_flip.flip_id = ${flipId}
+      and listing.ended = false
+    limit 1
+  `)
+  return (result.rows?.length ?? 0) > 0
+}
+
+export async function listingSpendIsFrozen(db: AppDatabase, listingId: string): Promise<boolean> {
+  let result = await db.exec(sql`
+    select 1
+    from listing_flip
+    join sale_flip on sale_flip.flip_id = listing_flip.flip_id and sale_flip.undone = false
+    where listing_flip.listing_id = ${listingId}
+    limit 1
+  `)
+  return (result.rows?.length ?? 0) > 0
+}
+
+export function formatListingTitle(names: string[]): string {
+  let sorted = [...names].sort((a, b) => a.localeCompare(b))
+  if (sorted.length === 0) {
+    return 'Listing'
+  }
+  if (sorted.length <= 3) {
+    return sorted.join(', ')
+  }
+  return `${sorted.slice(0, 3).join(', ')}, and ${sorted.length - 3} more`
+}
+
+export type ListingIndexRow = {
+  listing: Listing
+  title: string
+  live: boolean
+}
+
+export async function listListingsInBooks(
+  db: AppDatabase,
+  booksId: string,
+): Promise<ListingIndexRow[]> {
+  let rows = await db.findMany(listings, { where: { books_id: booksId } })
+  rows.sort((a, b) => Number(a.ended) - Number(b.ended) || a.id.localeCompare(b.id))
+
+  let membership = await db.exec(sql`
+    select listing_flip.listing_id, flip.name
+    from listing_flip
+    join flip on flip.id = listing_flip.flip_id
+    where listing_flip.books_id = ${booksId}
+    order by flip.name asc
+  `)
+  let namesByListing = new Map<string, string[]>()
+  for (let row of membership.rows ?? []) {
+    let listingId = String(row.listing_id)
+    let names = namesByListing.get(listingId) ?? []
+    names.push(String(row.name))
+    namesByListing.set(listingId, names)
+  }
+
+  return rows.map((listing) => ({
+    listing,
+    title: formatListingTitle(namesByListing.get(listing.id) ?? []),
+    live: !listing.ended,
+  }))
+}
+
+export async function listListingFlips(
+  db: AppDatabase,
+  input: { listingId: string; booksId: string },
+): Promise<Flip[]> {
+  let result = await db.exec(sql`
+    select flip.*
+    from flip
+    join listing_flip on listing_flip.flip_id = flip.id
+    where listing_flip.listing_id = ${input.listingId}
+      and listing_flip.books_id = ${input.booksId}
+    order by flip.name asc, flip.id asc
+  `)
+  return (result.rows ?? []) as Flip[]
+}
+
+export type ListingHub = {
+  listing: Listing
+  title: string
+  flips: Flip[]
+  spendFrozen: boolean
+  remainingInventory: Flip[]
+  ended: boolean
+}
+
+export async function loadListingHub(
+  db: AppDatabase,
+  input: { listingId: string; booksId: string },
+): Promise<ListingHub | null> {
+  let listing = await findListingInBooks(db, input)
+  if (!listing) {
+    return null
+  }
+  let members = await listListingFlips(db, input)
+  let remainingInventory: Flip[] = []
+  for (let flip of members) {
+    if (!flip.retired && !(await flipHasStandingSale(db, flip.id))) {
+      remainingInventory.push(flip)
+    }
+  }
+  return {
+    listing,
+    title: formatListingTitle(members.map((flip) => flip.name)),
+    flips: members,
+    spendFrozen: await listingSpendIsFrozen(db, listing.id),
+    remainingInventory,
+    ended: listing.ended,
+  }
+}
+
+export type CreateListingInput = {
+  booksId: string
+  flipIds: string[]
+  listingSpend: number
+  notes?: string
+}
+
+export async function createListing(
+  db: AppDatabase,
+  input: CreateListingInput,
+): Promise<{ ok: true; listing: Listing } | { ok: false; error: string; status: number }> {
+  return db.transaction(async (tx) => {
+    let kit = await loadKitFlips(tx, {
+      booksId: input.booksId,
+      flipIds: input.flipIds,
+      emptyError: 'Pick Inventory Flips for a Listing.',
+    })
+    if (!kit.ok) {
+      return kit
+    }
+    let listing = (await tx.create(
+      listings,
+      {
+        id: crypto.randomUUID(),
+        books_id: input.booksId,
+        listing_spend: input.listingSpend,
+        ended: false,
+        ...(input.notes ? { notes: input.notes } : {}),
+      },
+      { returnRow: true },
+    )) as Listing
+    for (let row of kit.kit) {
+      await tx.create(listingFlips, {
+        books_id: input.booksId,
+        listing_id: listing.id,
+        flip_id: row.flip.id,
+      })
+    }
+    return { ok: true as const, listing }
+  })
+}
+
+export async function replaceListingFacts(
+  db: AppDatabase,
+  input: { listingId: string; booksId: string; listingSpend: number; notes?: string },
+): Promise<{ ok: true; listing: Listing } | { ok: false; error: string; status: number }> {
+  let listing = await findListingInBooks(db, input)
+  if (!listing) {
+    return { ok: false, error: 'Not Found', status: 404 }
+  }
+  let frozen = await listingSpendIsFrozen(db, listing.id)
+  let updated = (await db.update(listings, listing.id, {
+    notes: input.notes,
+    ...(frozen ? {} : { listing_spend: input.listingSpend }),
+  })) as Listing
+  return { ok: true as const, listing: updated }
+}
+
+export async function endListing(
+  db: AppDatabase,
+  input: { listingId: string; booksId: string },
+): Promise<{ ok: true; listing: Listing } | { ok: false; error: string; status: number }> {
+  let listing = await findListingInBooks(db, input)
+  if (!listing) {
+    return { ok: false, error: 'Not Found', status: 404 }
+  }
+  if (listing.ended) {
+    return { ok: true as const, listing }
+  }
+  let updated = (await db.update(listings, listing.id, { ended: true })) as Listing
+  return { ok: true as const, listing: updated }
+}
+
+async function endSoldOutListings(db: AppDatabase, booksId: string): Promise<void> {
+  await db.exec(sql`
+    update listing
+    set ended = true
+    where books_id = ${booksId}
+      and ended = false
+      and not exists (
+        select 1
+        from listing_flip
+        join flip on flip.id = listing_flip.flip_id
+        where listing_flip.listing_id = listing.id
+          and flip.retired = false
+          and not exists (
+            select 1
+            from sale_flip
+            where sale_flip.flip_id = flip.id
+              and sale_flip.undone = false
+          )
+      )
+  `)
+}
+
+export async function listingSpendByFlipId(
+  db: AppDatabase,
+  booksId: string,
+): Promise<Map<string, number>> {
+  let flipRows = await db.exec(sql`
+    select *
+    from flip
+    where books_id = ${booksId}
+  `)
+  let allFlips = (flipRows.rows ?? []) as Flip[]
+  let flipsById = new Map(allFlips.map((flip) => [flip.id, flip]))
+
+  let membership = await db.exec(sql`
+    select listing.id as listing_id, listing.listing_spend, listing_flip.flip_id
+    from listing
+    join listing_flip on listing_flip.listing_id = listing.id
+    where listing.books_id = ${booksId}
+  `)
+
+  type ListingGroup = { spend: number; flipIds: string[] }
+  let groups = new Map<string, ListingGroup>()
+  for (let row of membership.rows ?? []) {
+    let listingId = String(row.listing_id)
+    let group = groups.get(listingId)
+    if (!group) {
+      group = { spend: Number(row.listing_spend), flipIds: [] }
+      groups.set(listingId, group)
+    }
+    group.flipIds.push(String(row.flip_id))
+  }
+
+  let spendByFlip = new Map<string, number>()
+  function addSpend(flipId: string, cents: number) {
+    spendByFlip.set(flipId, (spendByFlip.get(flipId) ?? 0) + cents)
+  }
+
+  for (let group of groups.values()) {
+    let members = group.flipIds
+      .map((flipId) => flipsById.get(flipId))
+      .filter((flip): flip is Flip => flip != null)
+      .sort((a, b) => a.id.localeCompare(b.id))
+    if (members.length === 0) {
+      continue
+    }
+    let memberShares = allocateShares(
+      group.spend,
+      members.map((flip) => acquisitionCostCents(flip)),
+    )
+    for (let index = 0; index < members.length; index += 1) {
+      let member = members[index]!
+      let share = memberShares[index]!
+      if (!member.retired) {
+        addSpend(member.id, share)
+        continue
+      }
+      let descendants = nonRetiredDescendants(member.id, allFlips, flipsById)
+      if (descendants.length === 0) {
+        continue
+      }
+      descendants.sort((a, b) => a.id.localeCompare(b.id))
+      let childShares = allocateShares(
+        share,
+        descendants.map((flip) => acquisitionCostCents(flip)),
+      )
+      for (let childIndex = 0; childIndex < descendants.length; childIndex += 1) {
+        addSpend(descendants[childIndex]!.id, childShares[childIndex]!)
+      }
+    }
+  }
+
+  return spendByFlip
+}
+
+function nonRetiredDescendants(
+  ancestorId: string,
+  allFlips: Flip[],
+  flipsById: Map<string, Flip>,
+): Flip[] {
+  return allFlips.filter((flip) => {
+    if (flip.retired) {
+      return false
+    }
+    let current: Flip | undefined = flip
+    while (current?.parent_flip_id) {
+      if (current.parent_flip_id === ancestorId) {
+        return true
+      }
+      current = flipsById.get(current.parent_flip_id)
+    }
+    return false
+  })
 }
 
 export async function loadStandingKit(
@@ -786,7 +1125,8 @@ export async function loadStandingSaleForFlip(
     return null
   }
   let kit = await loadStandingKit(db, { saleId: sale.id, booksId: input.booksId })
-  let profits = profitSharesForKit(sale, kit)
+  let listingSpend = await listingSpendByFlipId(db, input.booksId)
+  let profits = profitSharesForKit(sale, kit, listingSpend)
   return { sale, channel, profitCents: profits.get(input.flipId) ?? 0 }
 }
 
@@ -796,6 +1136,7 @@ export function profitSharesForKit(
     'sale_price' | 'buyer_paid_shipping' | 'marketplace_fee' | 'outbound_shipping' | 'supplies'
   >,
   kit: KitFlip[],
+  listingSpendByFlip: Map<string, number> = new Map(),
 ): Map<string, number> {
   let ordered = [...kit].sort((a, b) => a.flip.id.localeCompare(b.flip.id))
   let weights = ordered.map((row) => row.acquisitionCostCents)
@@ -805,10 +1146,12 @@ export function profitSharesForKit(
   let supplyShares = allocateShares(sale.supplies, weights)
   let profits = new Map<string, number>()
   for (let index = 0; index < ordered.length; index += 1) {
+    let flipId = ordered[index]!.flip.id
     profits.set(
-      ordered[index]!.flip.id,
+      flipId,
       proceedsShares[index]! -
         weights[index]! -
+        (listingSpendByFlip.get(flipId) ?? 0) -
         feeShares[index]! -
         shipShares[index]! -
         supplyShares[index]!,
@@ -867,6 +1210,7 @@ export async function createSale(
         undone: false,
       })
     }
+    await endSoldOutListings(tx, input.booksId)
     return { ok: true as const, sale }
   })
 }
@@ -985,6 +1329,7 @@ async function loadStandingFlipProfits(
     group.flipIds.push(String(row.flip_id))
   }
 
+  let listingSpend = await listingSpendByFlipId(db, booksId)
   let profits = new Map<string, FlipProfit>()
   for (let group of groups.values()) {
     let kit: KitFlip[] = []
@@ -994,7 +1339,7 @@ async function loadStandingFlipProfits(
         kit.push({ flip, acquisitionCostCents: acquisitionCostCents(flip) })
       }
     }
-    let shares = profitSharesForKit(group.sale, kit)
+    let shares = profitSharesForKit(group.sale, kit, listingSpend)
     for (let [flipId, profitCents] of shares) {
       profits.set(flipId, { flipId, saleDate: group.saleDate, profitCents })
     }

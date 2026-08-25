@@ -23,6 +23,8 @@ export function SalePage(handle: {
     identity: OperatorIdentity
     csrf: string
     kit: KitFlip[]
+    inventory?: KitFlip[]
+    selectedFlipIds?: string[]
     channels: Channel[]
     action: string
     includeFlipIds?: boolean
@@ -31,27 +33,39 @@ export function SalePage(handle: {
   }
 }) {
   return () => {
-    let { identity, csrf, kit, channels, action, includeFlipIds, error, values } = handle.props
+    let { identity, csrf, kit, inventory, selectedFlipIds, channels, action, includeFlipIds, error, values } =
+      handle.props
+    let checked = new Set(selectedFlipIds ?? kit.map((row) => row.flip.id))
+    let flipRows = includeFlipIds ? (inventory ?? kit) : kit
 
     return (
       <AppShell title="Sale" identity={identity} current="inventory">
         <h1 mix={heading}>Sale</h1>
         <p mix={lead}>One Sale for the kit. Acquisition cost is the weight.</p>
         {error ? <p mix={errorBanner}>{error}</p> : null}
-        <ul mix={inventoryList}>
-          {kit.map((row) => (
-            <li key={row.flip.id} mix={inventoryItem}>
-              {row.flip.name} — Acquisition cost {formatCents(row.acquisitionCostCents)}
-            </li>
-          ))}
-        </ul>
         <form method="post" action={action} mix={fieldStack}>
           <input type="hidden" name="_csrf" value={csrf} />
-          {includeFlipIds
-            ? kit.map((row) => (
-                <input key={row.flip.id} type="hidden" name="flip" value={row.flip.id} />
-              ))
-            : null}
+          <ul mix={inventoryList}>
+            {flipRows.map((row) => (
+              <li key={row.flip.id} mix={inventoryItem}>
+                {includeFlipIds ? (
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="flip"
+                      value={row.flip.id}
+                      checked={checked.has(row.flip.id) ? true : undefined}
+                    />{' '}
+                    {row.flip.name} — Acquisition cost {formatCents(row.acquisitionCostCents)}
+                  </label>
+                ) : (
+                  <>
+                    {row.flip.name} — Acquisition cost {formatCents(row.acquisitionCostCents)}
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
           <label mix={labelStyle}>
             Channel
             <input

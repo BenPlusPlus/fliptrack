@@ -24,6 +24,8 @@ import channelsController from './actions/channels/controller.tsx'
 import deleteChannelController from './actions/channels/delete/controller.tsx'
 import salesController from './actions/sales/controller.tsx'
 import newSaleController from './actions/sales/new/controller.tsx'
+import listingsController from './actions/listings/controller.tsx'
+import newListingController from './actions/listings/new/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadConfig } from './middleware/config.ts'
 import { loadDatabase } from './middleware/database.ts'
@@ -76,6 +78,8 @@ export function createApp(options: CreateAppOptions) {
   router.map(routes.channels.delete, deleteChannelController)
   router.map(routes.sales, salesController)
   router.map(routes.sales.new, newSaleController)
+  router.map(routes.listings, listingsController)
+  router.map(routes.listings.new, newListingController)
 
   return { router, db }
 }

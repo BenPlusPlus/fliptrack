@@ -9,7 +9,7 @@ export function AppShell(
   handle: Handle<{
     title: string
     identity?: OperatorIdentity | null
-    current?: 'home' | 'inventory' | 'account'
+    current?: 'home' | 'inventory' | 'listings' | 'account'
     hideNav?: boolean
     children?: RemixNode
   }>,
@@ -35,6 +35,12 @@ export function AppShell(
               aria-current={current === 'inventory' ? 'page' : undefined}
             >
               Inventory
+            </a>
+            <a
+              href={routes.listings.index.href()}
+              aria-current={current === 'listings' ? 'page' : undefined}
+            >
+              Listings
             </a>
             <a
               href={routes.account.href()}

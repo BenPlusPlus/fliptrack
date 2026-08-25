@@ -58,6 +58,7 @@ export default createController(routes.flips, {
           inboundFrozen={hub.inboundFrozen}
           mayRemove={hub.mayRemove}
           isInventory={hub.isInventory}
+          mayResplit={hub.mayResplit}
         />,
       )
     },
@@ -72,8 +73,18 @@ export default createController(routes.flips, {
       if (!hub) {
         return new Response('Not Found', { status: 404 })
       }
-      let { flip, acquisition, tags, bookTags, parent, standing, inboundFrozen, mayRemove, isInventory } =
-        hub
+      let {
+        flip,
+        acquisition,
+        tags,
+        bookTags,
+        parent,
+        standing,
+        inboundFrozen,
+        mayRemove,
+        isInventory,
+        mayResplit,
+      } = hub
 
       let formData = context.get(FormData)
       let name = String(formData.get('name') ?? '').trim()
@@ -96,6 +107,7 @@ export default createController(routes.flips, {
             inboundFrozen={inboundFrozen}
             mayRemove={mayRemove}
             isInventory={isInventory}
+            mayResplit={mayResplit}
             error={
               name === ''
                 ? 'Flip name is required.'
@@ -195,6 +207,7 @@ function FlipHubPage(handle: {
     inboundFrozen: boolean
     mayRemove: boolean
     isInventory: boolean
+    mayResplit: boolean
     error?: string
     values?: {
       name: string
@@ -218,6 +231,7 @@ function FlipHubPage(handle: {
       inboundFrozen,
       mayRemove,
       isInventory,
+      mayResplit,
       error,
       values,
     } = handle.props
@@ -361,7 +375,7 @@ function FlipHubPage(handle: {
             </a>
           </p>
         ) : null}
-        {isInventory ? (
+        {mayResplit ? (
           <p mix={leaveRow}>
             <a
               href={routes.flips.resplit.index.href({ flipId: flip.id })}

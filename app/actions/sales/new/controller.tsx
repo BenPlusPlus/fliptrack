@@ -3,8 +3,10 @@ import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import {
+  acquisitionCostCents,
   createSale,
   listChannelsInBooks,
+  listInventory,
   loadKitFlips,
 } from '../../../data/queries.ts'
 import { databaseContext } from '../../../middleware/database.ts'
@@ -25,12 +27,20 @@ export default createController(routes.sales.new, {
       if (!kit.ok) {
         return new Response(kit.error, { status: kit.status })
       }
-      let channels = await listChannelsInBooks(db, identity.booksId)
+      let [channels, inventoryFlips] = await Promise.all([
+        listChannelsInBooks(db, identity.booksId),
+        listInventory(db, identity.booksId),
+      ])
       return context.render(
         <SalePage
           identity={identity}
           csrf={getCsrfToken(context)}
           kit={kit.kit}
+          inventory={inventoryFlips.map((flip) => ({
+            flip,
+            acquisitionCostCents: acquisitionCostCents(flip),
+          }))}
+          selectedFlipIds={kit.kit.map((row) => row.flip.id)}
           channels={channels}
           action={routes.sales.new.action.href()}
           includeFlipIds
@@ -48,7 +58,14 @@ export default createController(routes.sales.new, {
       if (!kit.ok) {
         return new Response(kit.error, { status: kit.status })
       }
-      let channels = await listChannelsInBooks(db, identity.booksId)
+      let [channels, inventoryFlips] = await Promise.all([
+        listChannelsInBooks(db, identity.booksId),
+        listInventory(db, identity.booksId),
+      ])
+      let inventory = inventoryFlips.map((flip) => ({
+        flip,
+        acquisitionCostCents: acquisitionCostCents(flip),
+      }))
 
       if (!parsed.ok) {
         return context.render(
@@ -56,6 +73,8 @@ export default createController(routes.sales.new, {
             identity={identity}
             csrf={getCsrfToken(context)}
             kit={kit.kit}
+            inventory={inventory}
+            selectedFlipIds={flipIds}
             channels={channels}
             action={routes.sales.new.action.href()}
             includeFlipIds
@@ -84,6 +103,8 @@ export default createController(routes.sales.new, {
             identity={identity}
             csrf={getCsrfToken(context)}
             kit={kit.kit}
+            inventory={inventory}
+            selectedFlipIds={flipIds}
             channels={channels}
             action={routes.sales.new.action.href()}
             includeFlipIds

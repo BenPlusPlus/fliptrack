@@ -2,7 +2,12 @@ import { getCsrfToken } from 'remix/middleware/csrf'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
-import { findFlipInBooks, flipHasStandingSale, resplitFlip } from '../../../data/queries.ts'
+import {
+  findFlipInBooks,
+  flipHasLiveListing,
+  flipHasStandingSale,
+  resplitFlip,
+} from '../../../data/queries.ts'
 import { databaseContext } from '../../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../../middleware/auth.ts'
@@ -33,7 +38,12 @@ export default createController(routes.flips.resplit, {
         flipId: context.params.flipId,
         booksId: identity.booksId,
       })
-      if (!flip || flip.retired || (await flipHasStandingSale(db, flip.id))) {
+      if (
+        !flip ||
+        flip.retired ||
+        (await flipHasStandingSale(db, flip.id)) ||
+        (await flipHasLiveListing(db, flip.id))
+      ) {
         return new Response('Not Found', { status: 404 })
       }
 

@@ -114,6 +114,27 @@ export const saleFlips = table({
   },
 })
 
+export const listings = table({
+  name: 'listing',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    listing_spend: c.integer().notNull(),
+    notes: c.text(),
+    ended: c.boolean().notNull(),
+  },
+})
+
+export const listingFlips = table({
+  name: 'listing_flip',
+  primaryKey: ['listing_id', 'flip_id'],
+  columns: {
+    books_id: c.uuid().notNull().references('books', 'id'),
+    listing_id: c.uuid().notNull().references('listing', 'id'),
+    flip_id: c.uuid().notNull().references('flip', 'id'),
+  },
+})
+
 export type Books = TableRow<typeof books>
 export type Operator = TableRow<typeof operators>
 export type Acquisition = TableRow<typeof acquisitions>
@@ -122,3 +143,5 @@ export type Tag = TableRow<typeof tags>
 export type Channel = TableRow<typeof channels>
 export type Sale = TableRow<typeof sales>
 export type SaleFlip = TableRow<typeof saleFlips>
+export type Listing = TableRow<typeof listings>
+export type ListingFlip = TableRow<typeof listingFlips>

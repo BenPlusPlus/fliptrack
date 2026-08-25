@@ -114,7 +114,7 @@ export const bottomNav = css({
   right: 0,
   bottom: 0,
   display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
+  gridTemplateColumns: 'repeat(4, 1fr)',
   background: 'var(--paper-dark)',
   borderTop: '1px solid var(--rule)',
   zIndex: 5,
