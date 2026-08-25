@@ -2,7 +2,13 @@ import { getCsrfToken } from 'remix/middleware/csrf'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
-import { findFlipInBooks, resplitFlip } from '../../../data/queries.ts'
+import {
+  findFlipInBooks,
+  flipHasLiveListing,
+  flipHasStandingSale,
+  flipHasStandingWriteOff,
+  resplitFlip,
+} from '../../../data/queries.ts'
 import { databaseContext } from '../../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../../middleware/auth.ts'
@@ -28,11 +34,18 @@ export default createController(routes.flips.resplit, {
   actions: {
     async index(context) {
       let identity = operatorFrom(context)
-      let flip = await findFlipInBooks(mustGet(context.get(databaseContext), 'database'), {
+      let db = mustGet(context.get(databaseContext), 'database')
+      let flip = await findFlipInBooks(db, {
         flipId: context.params.flipId,
         booksId: identity.booksId,
       })
-      if (!flip || flip.retired) {
+      if (
+        !flip ||
+        flip.retired ||
+        (await flipHasStandingSale(db, flip.id)) ||
+        (await flipHasStandingWriteOff(db, flip.id)) ||
+        (await flipHasLiveListing(db, flip.id))
+      ) {
         return new Response('Not Found', { status: 404 })
       }
 
@@ -158,7 +171,7 @@ function ResplitPage(handle: {
     let preview = childPreviews(parent, rows)
 
     return (
-      <AppShell title="Re-split" identity={identity} current="inventory">
+      <AppShell title="Re-split" identity={identity} csrf={csrf} current="inventory">
         <h1 mix={heading}>Re-split {parent.name}</h1>
         <p mix={lead}>
           Child Item costs must sum to {formatCents(parent.item_cost)}. Resulting Acquisition costs
@@ -201,9 +214,11 @@ function ResplitPage(handle: {
               </p>
             </fieldset>
           ))}
-          <button type="submit" mix={primaryAction}>
-            Save Re-split
-          </button>
+          {identity.inspecting ? null : (
+            <button type="submit" mix={primaryAction}>
+              Save Re-split
+            </button>
+          )}
         </form>
         <p mix={leaveRow}>
           <a href={routes.flips.show.href({ flipId: parent.id })} mix={ghostAction}>

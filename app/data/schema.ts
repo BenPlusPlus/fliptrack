@@ -75,8 +75,101 @@ export const flipTags = table({
   },
 })
 
+export const channels = table({
+  name: 'channel',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    name: c.text().notNull(),
+  },
+})
+
+export const sales = table({
+  name: 'sale',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    channel_id: c.uuid().notNull().references('channel', 'id'),
+    sale_date: c.date().notNull(),
+    sale_price: c.integer().notNull(),
+    buyer_paid_shipping: c.integer().notNull(),
+    marketplace_fee: c.integer().notNull(),
+    outbound_shipping: c.integer().notNull(),
+    supplies: c.integer().notNull(),
+    notes: c.text(),
+  },
+})
+
+export const saleFlips = table({
+  name: 'sale_flip',
+  primaryKey: ['sale_id', 'flip_id'],
+  columns: {
+    books_id: c.uuid().notNull().references('books', 'id'),
+    sale_id: c.uuid().notNull().references('sale', 'id'),
+    flip_id: c.uuid().notNull().references('flip', 'id'),
+    undone: c.boolean().notNull(),
+    hitch_marketplace_fee: c.integer(),
+    hitch_outbound_shipping: c.integer(),
+    hitch_supplies: c.integer(),
+  },
+})
+
+export const listings = table({
+  name: 'listing',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    listing_spend: c.integer().notNull(),
+    notes: c.text(),
+    ended: c.boolean().notNull(),
+  },
+})
+
+export const listingFlips = table({
+  name: 'listing_flip',
+  primaryKey: ['listing_id', 'flip_id'],
+  columns: {
+    books_id: c.uuid().notNull().references('books', 'id'),
+    listing_id: c.uuid().notNull().references('listing', 'id'),
+    flip_id: c.uuid().notNull().references('flip', 'id'),
+  },
+})
+
+export const writeOffs = table({
+  name: 'write_off',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    write_off_date: c.date().notNull(),
+    outbound_shipping: c.integer().notNull(),
+    supplies: c.integer().notNull(),
+    notes: c.text(),
+  },
+})
+
+export const writeOffFlips = table({
+  name: 'write_off_flip',
+  primaryKey: ['write_off_id', 'flip_id'],
+  columns: {
+    books_id: c.uuid().notNull().references('books', 'id'),
+    write_off_id: c.uuid().notNull().references('write_off', 'id'),
+    flip_id: c.uuid().notNull().references('flip', 'id'),
+    undone: c.boolean().notNull(),
+    hitch_marketplace_fee: c.integer(),
+    hitch_outbound_shipping: c.integer(),
+    hitch_supplies: c.integer(),
+  },
+})
+
 export type Books = TableRow<typeof books>
 export type Operator = TableRow<typeof operators>
 export type Acquisition = TableRow<typeof acquisitions>
 export type Flip = TableRow<typeof flips>
 export type Tag = TableRow<typeof tags>
+export type Channel = TableRow<typeof channels>
+export type Sale = TableRow<typeof sales>
+export type SaleFlip = TableRow<typeof saleFlips>
+export type Listing = TableRow<typeof listings>
+export type ListingFlip = TableRow<typeof listingFlips>
+export type WriteOff = TableRow<typeof writeOffs>
+export type WriteOffFlip = TableRow<typeof writeOffFlips>

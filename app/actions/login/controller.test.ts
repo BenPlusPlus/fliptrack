@@ -69,7 +69,7 @@ describe('login and logout', () => {
       let html = await readBody(account)
       assert.match(html, /Logout/)
       assert.match(html, /Tags/)
-      assert.doesNotMatch(html, /Channel/)
+      assert.match(html, /Channels/)
 
       let form = new FormData()
       form.set('_csrf', csrfToken(html))

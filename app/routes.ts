@@ -4,11 +4,26 @@ export const routes = route({
   assets: get('/assets/*path'),
   home: '/',
   oobe: form('/oobe'),
-  login: form('/login'),
+  login: route({
+    index: get('/login'),
+    action: post('/login'),
+    signup: post('/signup'),
+  }),
   logout: post('/logout'),
+  password: form('/password'),
   inventory: '/inventory',
   account: '/account',
+  accountPassword: post('/account/password'),
+  admin: route('/admin', {
+    index: '/',
+    signup: post('/signup'),
+    tempPassword: post('/operators/:operatorId/password'),
+    inspect: post('/operators/:operatorId/inspect'),
+    leave: post('/leave'),
+  }),
   acquisitions: {
+    index: '/acquisitions',
+    show: get('/acquisitions/:acquisitionId'),
     new: form('/acquisitions/new'),
     addFlip: form('/acquisitions/:acquisitionId/flips/new'),
     continue: form('/acquisitions/:acquisitionId/continue'),
@@ -17,6 +32,27 @@ export const routes = route({
     rename: post('/'),
     delete: form('delete'),
   }),
+  channels: route('/channels/:channelId', {
+    rename: post('/'),
+    delete: form('delete'),
+  }),
+  listings: {
+    index: '/listings',
+    new: form('/listings/new'),
+    show: get('/listings/:listingId'),
+    update: post('/listings/:listingId'),
+    end: post('/listings/:listingId/end'),
+  },
+  sales: {
+    new: form('/sales/new'),
+    show: get('/sales/:saleId'),
+    update: post('/sales/:saleId'),
+  },
+  writeOffs: {
+    new: form('/write-offs/new'),
+    show: get('/write-offs/:writeOffId'),
+    update: post('/write-offs/:writeOffId'),
+  },
   flips: {
     show: get('/flips/:flipId'),
     update: post('/flips/:flipId'),
@@ -24,5 +60,6 @@ export const routes = route({
     removeTag: post('/flips/:flipId/tags/:tagId/remove'),
     remove: post('/flips/:flipId/remove'),
     resplit: form('/flips/:flipId/resplit'),
+    undo: form('/flips/:flipId/undo'),
   },
 })

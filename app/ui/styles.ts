@@ -108,29 +108,59 @@ export const stampAmount = css({
   lineHeight: 0.95,
 })
 
+export const inspectBanner = css({
+  background: '#f3d2c8',
+  border: '1px solid var(--stamp)',
+  color: 'var(--danger)',
+  padding: '0.75rem 0.9rem',
+  margin: '0 0 1rem',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '0.75rem',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  fontSize: '0.95rem',
+  '& button': {
+    background: 'transparent',
+    color: 'var(--ink)',
+    border: '1px solid var(--ink)',
+    fontFamily: FONT_BODY,
+    fontWeight: 700,
+    letterSpacing: '0.08em',
+    textTransform: 'uppercase',
+    fontSize: '0.75rem',
+    padding: '0.45rem 0.7rem',
+    cursor: 'pointer',
+  },
+})
+
 export const bottomNav = css({
   position: 'fixed',
   left: 0,
   right: 0,
   bottom: 0,
   display: 'grid',
-  gridTemplateColumns: 'repeat(3, 1fr)',
+  gridTemplateColumns: 'repeat(5, 1fr)',
   background: 'var(--paper-dark)',
   borderTop: '1px solid var(--rule)',
   zIndex: 5,
   '& a': {
     textAlign: 'center',
-    padding: '0.85rem 0.4rem 1.05rem',
+    padding: '0.75rem 0.2rem 0.95rem',
     color: 'var(--ink)',
     textDecoration: 'none',
-    fontSize: '0.78rem',
+    fontSize: '0.68rem',
     fontWeight: 700,
-    letterSpacing: '0.12em',
+    letterSpacing: '0.06em',
     textTransform: 'uppercase',
   },
   '& a[aria-current="page"]': {
     boxShadow: 'inset 0 3px 0 var(--stamp)',
   },
+})
+
+export const bottomNavAdmin = css({
+  gridTemplateColumns: 'repeat(6, 1fr)',
 })
 
 export const primaryAction = css({
@@ -217,10 +247,23 @@ export const windowValue = css({
   margin: '0.4rem 0 0',
 })
 
+export const profitStampLink = css({
+  display: 'block',
+  color: 'inherit',
+  textDecoration: 'none',
+  '&[aria-current="true"]': {
+    boxShadow: '4px 4px 0 rgba(28, 22, 16, 0.08), inset 0 3px 0 var(--stamp)',
+  },
+})
+
 export const mutedNote = css({
   margin: '0.2rem 0 0',
   color: 'var(--muted)',
   fontSize: '0.95rem',
+  '& a': {
+    color: 'inherit',
+    textDecoration: 'none',
+  },
 })
 
 export const ctaRow = css({

@@ -14,6 +14,8 @@ export const TEST_SETUP_SECRET = 'test-setup-secret'
 export const TEST_SESSION_SECRET = 'test-session-secret'
 export const TEST_EMAIL = 'operator@example.com'
 export const TEST_PASSWORD = 'correct-horse-battery'
+export const SECOND_EMAIL = 'second@example.com'
+export const SECOND_PASSWORD = 'second-horse-battery'
 
 type PostgresInfo = {
   connectionString: string
@@ -50,12 +52,20 @@ export async function createTestApp(
 }
 
 export async function resetBooks(db: AppDatabase): Promise<void> {
+  await db.exec(sql`delete from sale_flip`)
+  await db.exec(sql`delete from sale`)
+  await db.exec(sql`delete from channel`)
+  await db.exec(sql`delete from write_off_flip`)
+  await db.exec(sql`delete from write_off`)
+  await db.exec(sql`delete from listing_flip`)
+  await db.exec(sql`delete from listing`)
   await db.exec(sql`delete from flip_tag`)
   await db.exec(sql`delete from tag`)
   await db.exec(sql`delete from flip`)
   await db.exec(sql`delete from acquisition`)
   await db.exec(sql`delete from operator`)
   await db.exec(sql`delete from books`)
+  await db.exec(sql`update instance_settings set signup_open = false`)
 }
 
 export async function fetchPage(
@@ -93,7 +103,7 @@ export function csrfToken(html: string): string {
 export async function postForm(
   app: TestApp,
   href: string,
-  fields: Record<string, string>,
+  fields: Record<string, string | string[]>,
 ): Promise<Response> {
   let page = await fetchPage(app, href)
   if (page.status >= 300 && page.status < 400) {
@@ -102,9 +112,7 @@ export async function postForm(
   let html = await readBody(page)
   let form = new FormData()
   form.set('_csrf', csrfToken(html))
-  for (let [name, value] of Object.entries(fields)) {
-    form.set(name, value)
-  }
+  appendFields(form, fields)
   return fetchPage(app, href, { method: 'POST', body: form })
 }
 
@@ -159,19 +167,26 @@ export function flipHrefFromInventory(html: string, name: string): string {
   return match[1]!
 }
 
+export function listingHrefFromIndex(html: string, titlePart: string): string {
+  let escaped = titlePart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let match = html.match(new RegExp(`href="(/listings/[a-f0-9-]+)"[^>]*>\\s*[^<]*${escaped}`))
+  if (!match) {
+    throw new Error(`Expected a Listing link for "${titlePart}" in:\n${html.slice(0, 1500)}`)
+  }
+  return match[1]!
+}
+
 export async function postFormFrom(
   app: TestApp,
   csrfFromHref: string,
   actionHref: string,
-  fields: Record<string, string>,
+  fields: Record<string, string | string[]>,
 ): Promise<Response> {
   let page = await fetchPage(app, csrfFromHref)
   let html = await readBody(page)
   let form = new FormData()
   form.set('_csrf', csrfToken(html))
-  for (let [name, value] of Object.entries(fields)) {
-    form.set(name, value)
-  }
+  appendFields(form, fields)
   return fetchPage(app, actionHref, { method: 'POST', body: form })
 }
 
@@ -194,6 +209,49 @@ export async function login(
     email: input.email ?? TEST_EMAIL,
     password: input.password ?? TEST_PASSWORD,
   })
+}
+
+export async function openSignup(app: TestApp): Promise<Response> {
+  return postFormFrom(app, routes.admin.index.href(), routes.admin.signup.href(), {
+    signup_open: '1',
+  })
+}
+
+export async function signupOperator(
+  app: TestApp,
+  input: { email?: string; password?: string } = {},
+): Promise<Response> {
+  return postFormFrom(app, routes.login.index.href(), routes.login.signup.href(), {
+    email: input.email ?? SECOND_EMAIL,
+    password: input.password ?? SECOND_PASSWORD,
+  })
+}
+
+export function copyJar(jar: Map<string, string>): Map<string, string> {
+  return new Map(jar)
+}
+
+export function adminActionHref(
+  html: string,
+  email: string,
+  kind: 'inspect' | 'password',
+): string {
+  let escaped = email.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let match = html.match(
+    new RegExp(`${escaped}[\\s\\S]{0,1200}?action="(/admin/operators/[^"]+/${kind})"`),
+  )
+  if (!match) {
+    throw new Error(`Expected ${kind} action for ${email} in:\n${html.slice(0, 2000)}`)
+  }
+  return match[1]!
+}
+
+export function revealedTempPassword(html: string): string {
+  let match = html.match(/id="temp-password"[^>]*value="([^"]+)"/)
+  if (!match) {
+    throw new Error(`Expected a revealed temporary password in:\n${html.slice(0, 2000)}`)
+  }
+  return match[1]!
 }
 
 export async function fetchFollow(app: TestApp, href: string, init?: RequestInit): Promise<Response> {
@@ -252,4 +310,16 @@ function applySetCookie(jar: Map<string, string>, response: Response) {
 
 function cookieHeader(jar: Map<string, string>): string {
   return [...jar.entries()].map(([name, value]) => `${name}=${value}`).join('; ')
+}
+
+function appendFields(form: FormData, fields: Record<string, string | string[]>) {
+  for (let [name, value] of Object.entries(fields)) {
+    if (Array.isArray(value)) {
+      for (let item of value) {
+        form.append(name, item)
+      }
+    } else {
+      form.set(name, value)
+    }
+  }
 }

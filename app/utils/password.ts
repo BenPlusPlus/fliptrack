@@ -5,6 +5,17 @@ const ITERATIONS = 100000
 const SALT_LENGTH = 16
 const KEY_LENGTH = 32
 
+const TEMP_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'
+
+export function generateTempPassword(length = 16): string {
+  let bytes = crypto.getRandomValues(new Uint8Array(length))
+  let chars = []
+  for (let byte of bytes) {
+    chars.push(TEMP_ALPHABET[byte % TEMP_ALPHABET.length])
+  }
+  return chars.join('')
+}
+
 export async function hashPassword(password: string): Promise<string> {
   let salt = crypto.getRandomValues(new Uint8Array(SALT_LENGTH))
   let hash = await derivePasswordHash(password, salt, ITERATIONS)
