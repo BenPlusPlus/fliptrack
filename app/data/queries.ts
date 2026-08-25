@@ -196,6 +196,101 @@ export async function replaceAcquisitionFacts(
   })
 }
 
+export function formatAcquisitionTitle(names: string[], fallback: string): string {
+  let sorted = [...names].sort((a, b) => a.localeCompare(b))
+  if (sorted.length === 0) {
+    return fallback
+  }
+  if (sorted.length <= 3) {
+    return sorted.join(', ')
+  }
+  return `${sorted.slice(0, 3).join(', ')}, and ${sorted.length - 3} more`
+}
+
+export type AcquisitionIndexRow = {
+  acquisition: Acquisition
+  title: string
+  flips: Flip[]
+}
+
+export async function listAcquisitionsInBooks(
+  db: AppDatabase,
+  booksId: string,
+): Promise<AcquisitionIndexRow[]> {
+  let rows = await db.findMany(acquisitions, { where: { books_id: booksId } })
+  rows.sort(
+    (a, b) =>
+      String(b.acquisition_date).localeCompare(String(a.acquisition_date)) ||
+      a.id.localeCompare(b.id),
+  )
+
+  let members = await db.exec(sql`
+    select *
+    from flip
+    where books_id = ${booksId}
+      and retired = false
+    order by name asc, id asc
+  `)
+  let flipsByAcquisition = new Map<string, Flip[]>()
+  for (let row of (members.rows ?? []) as Flip[]) {
+    let list = flipsByAcquisition.get(row.acquisition_id) ?? []
+    list.push(row)
+    flipsByAcquisition.set(row.acquisition_id, list)
+  }
+
+  return rows.map((acquisition) => {
+    let flips = flipsByAcquisition.get(acquisition.id) ?? []
+    return {
+      acquisition,
+      title: formatAcquisitionTitle(
+        flips.map((flip) => flip.name),
+        String(acquisition.acquisition_date),
+      ),
+      flips,
+    }
+  })
+}
+
+export async function listAcquisitionFlips(
+  db: AppDatabase,
+  input: { acquisitionId: string; booksId: string },
+): Promise<Flip[]> {
+  let result = await db.exec(sql`
+    select *
+    from flip
+    where acquisition_id = ${input.acquisitionId}
+      and books_id = ${input.booksId}
+      and retired = false
+    order by name asc, id asc
+  `)
+  return (result.rows ?? []) as Flip[]
+}
+
+export type AcquisitionHub = {
+  acquisition: Acquisition
+  title: string
+  flips: Flip[]
+}
+
+export async function loadAcquisitionHub(
+  db: AppDatabase,
+  input: { acquisitionId: string; booksId: string },
+): Promise<AcquisitionHub | null> {
+  let acquisition = await findAcquisitionInBooks(db, input)
+  if (!acquisition) {
+    return null
+  }
+  let flips = await listAcquisitionFlips(db, input)
+  return {
+    acquisition,
+    title: formatAcquisitionTitle(
+      flips.map((flip) => flip.name),
+      String(acquisition.acquisition_date),
+    ),
+    flips,
+  }
+}
+
 export async function addFlipAndSnapshotSitting(
   db: AppDatabase,
   input: {

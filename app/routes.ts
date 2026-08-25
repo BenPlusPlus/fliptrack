@@ -22,6 +22,8 @@ export const routes = route({
     leave: post('/leave'),
   }),
   acquisitions: {
+    index: '/acquisitions',
+    show: get('/acquisitions/:acquisitionId'),
     new: form('/acquisitions/new'),
     addFlip: form('/acquisitions/:acquisitionId/flips/new'),
     continue: form('/acquisitions/:acquisitionId/continue'),

@@ -15,6 +15,7 @@ import oobeController from './actions/oobe/controller.tsx'
 import loginController from './actions/login/controller.tsx'
 import passwordController from './actions/password/controller.tsx'
 import adminController from './actions/admin/controller.tsx'
+import acquisitionsController from './actions/acquisitions/controller.tsx'
 import newAcquisitionController from './actions/acquisitions/new/controller.tsx'
 import addFlipController from './actions/acquisitions/addFlip/controller.tsx'
 import continueAcquisitionController from './actions/acquisitions/continue/controller.tsx'
@@ -82,6 +83,7 @@ export function createApp(options: CreateAppOptions) {
   router.map(routes.login, loginController)
   router.map(routes.password, passwordController)
   router.map(routes.admin, adminController)
+  router.map(routes.acquisitions, acquisitionsController)
   router.map(routes.acquisitions.new, newAcquisitionController)
   router.map(routes.acquisitions.addFlip, addFlipController)
   router.map(routes.acquisitions.continue, continueAcquisitionController)

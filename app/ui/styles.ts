@@ -140,18 +140,18 @@ export const bottomNav = css({
   right: 0,
   bottom: 0,
   display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)',
+  gridTemplateColumns: 'repeat(5, 1fr)',
   background: 'var(--paper-dark)',
   borderTop: '1px solid var(--rule)',
   zIndex: 5,
   '& a': {
     textAlign: 'center',
-    padding: '0.85rem 0.4rem 1.05rem',
+    padding: '0.75rem 0.2rem 0.95rem',
     color: 'var(--ink)',
     textDecoration: 'none',
-    fontSize: '0.78rem',
+    fontSize: '0.68rem',
     fontWeight: 700,
-    letterSpacing: '0.12em',
+    letterSpacing: '0.06em',
     textTransform: 'uppercase',
   },
   '& a[aria-current="page"]': {
@@ -160,7 +160,7 @@ export const bottomNav = css({
 })
 
 export const bottomNavAdmin = css({
-  gridTemplateColumns: 'repeat(5, 1fr)',
+  gridTemplateColumns: 'repeat(6, 1fr)',
 })
 
 export const primaryAction = css({
@@ -260,6 +260,10 @@ export const mutedNote = css({
   margin: '0.2rem 0 0',
   color: 'var(--muted)',
   fontSize: '0.95rem',
+  '& a': {
+    color: 'inherit',
+    textDecoration: 'none',
+  },
 })
 
 export const ctaRow = css({

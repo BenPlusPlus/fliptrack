@@ -223,7 +223,10 @@ function AddFlipPage(handle: {
           )}
         </form>
         <p mix={leaveRow}>
-          <a href={routes.home.href()} mix={ghostAction}>
+          <a
+            href={routes.acquisitions.show.href({ acquisitionId })}
+            mix={ghostAction}
+          >
             Leave
           </a>
         </p>

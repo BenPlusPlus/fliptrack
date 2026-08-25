@@ -18,7 +18,7 @@ export function AppShell(
     title: string
     identity?: OperatorIdentity | null
     csrf?: string
-    current?: 'home' | 'inventory' | 'listings' | 'account' | 'admin'
+    current?: 'home' | 'inventory' | 'acquisitions' | 'listings' | 'account' | 'admin'
     hideNav?: boolean
     children?: RemixNode
   }>,
@@ -65,6 +65,12 @@ export function AppShell(
               aria-current={current === 'inventory' ? 'page' : undefined}
             >
               Inventory
+            </a>
+            <a
+              href={routes.acquisitions.index.href()}
+              aria-current={current === 'acquisitions' ? 'page' : undefined}
+            >
+              Acquisitions
             </a>
             <a
               href={routes.listings.index.href()}

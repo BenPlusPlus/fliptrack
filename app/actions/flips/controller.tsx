@@ -408,7 +408,11 @@ function FlipHubPage(handle: {
             </form>
           )}
         </section>
-        <p mix={mutedNote}>Acquisition {String(acquisition.acquisition_date)}</p>
+        <p mix={mutedNote}>
+          <a href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}>
+            Acquisition {String(acquisition.acquisition_date)}
+          </a>
+        </p>
         {typeof acquisition.notes === 'string' && acquisition.notes !== '' ? (
           <p mix={mutedNote}>{acquisition.notes}</p>
         ) : null}

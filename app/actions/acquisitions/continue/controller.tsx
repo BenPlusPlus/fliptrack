@@ -186,7 +186,10 @@ function ContinueAcquisitionPage(handle: {
           )}
         </form>
         <p mix={leaveRow}>
-          <a href={routes.home.href()} mix={ghostAction}>
+          <a
+            href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}
+            mix={ghostAction}
+          >
             Leave
           </a>
         </p>
