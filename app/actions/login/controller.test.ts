@@ -68,7 +68,7 @@ describe('login and logout', () => {
       assert.equal(account.status, 200)
       let html = await readBody(account)
       assert.match(html, /Logout/)
-      assert.doesNotMatch(html, /Tags/)
+      assert.match(html, /Tags/)
       assert.doesNotMatch(html, /Channel/)
 
       let form = new FormData()

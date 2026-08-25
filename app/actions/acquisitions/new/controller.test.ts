@@ -3,9 +3,11 @@ import { afterEach, describe, it } from 'remix/test'
 
 import { routes } from '../../../routes.ts'
 import {
+  acquireFlip,
   createOperatorViaOobe,
   createTestApp,
   fetchPage,
+  flipHrefFromInventory,
   postForm,
   readBody,
   resetBooks,
@@ -46,7 +48,8 @@ describe('New Acquisition', () => {
       assert.equal(stillThere.status, 200)
       let addHtml = await readBody(stillThere)
       assert.match(addHtml, /Add a Flip/)
-      assert.doesNotMatch(addHtml, /Tag/)
+      assert.match(addHtml, /name="tag"/)
+      assert.match(addHtml, /Tag/)
 
       let inventory = await fetchPage(app, routes.inventory.href())
       assert.equal(inventory.status, 200)
@@ -115,6 +118,26 @@ describe('New Acquisition', () => {
 
       let inventory = await fetchPage(app, routes.inventory.href())
       assert.match(await readBody(inventory), /Opening lamp/)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('attaches a skippable Tag created by naming', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      await acquireFlip(app, {
+        name: 'Oak dresser',
+        itemCost: '40',
+        tag: 'Goodwill',
+      })
+
+      let inventoryHtml = await readBody(await fetchPage(app, routes.inventory.href()))
+      let html = await readBody(
+        await fetchPage(app, flipHrefFromInventory(inventoryHtml, 'Oak dresser')),
+      )
+      assert.match(html, />Goodwill</)
     } finally {
       await app.db.close()
     }

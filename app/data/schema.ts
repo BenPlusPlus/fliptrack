@@ -46,6 +46,8 @@ export const flips = table({
     id: c.uuid().primaryKey(),
     books_id: c.uuid().notNull().references('books', 'id'),
     acquisition_id: c.uuid().notNull().references('acquisition', 'id'),
+    parent_flip_id: c.uuid().references('flip', 'id'),
+    retired: c.boolean().notNull(),
     name: c.text().notNull(),
     notes: c.text(),
     item_cost: c.integer().notNull(),
@@ -54,7 +56,27 @@ export const flips = table({
   },
 })
 
+export const tags = table({
+  name: 'tag',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    name: c.text().notNull(),
+  },
+})
+
+export const flipTags = table({
+  name: 'flip_tag',
+  primaryKey: ['flip_id', 'tag_id'],
+  columns: {
+    books_id: c.uuid().notNull().references('books', 'id'),
+    flip_id: c.uuid().notNull().references('flip', 'id'),
+    tag_id: c.uuid().notNull().references('tag', 'id'),
+  },
+})
+
 export type Books = TableRow<typeof books>
 export type Operator = TableRow<typeof operators>
 export type Acquisition = TableRow<typeof acquisitions>
 export type Flip = TableRow<typeof flips>
+export type Tag = TableRow<typeof tags>

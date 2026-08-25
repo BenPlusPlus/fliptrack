@@ -25,6 +25,15 @@ export function parseCents(raw: string, options?: { required?: boolean }): Cents
   return { ok: true, cents }
 }
 
+export function centsToInput(cents: number): string {
+  let dollars = Math.floor(cents / 100)
+  let remainder = cents % 100
+  if (remainder === 0) {
+    return String(dollars)
+  }
+  return `${dollars}.${String(remainder).padStart(2, '0')}`
+}
+
 export function formatCents(cents: number): string {
   if (cents === 0) {
     return '$0'
