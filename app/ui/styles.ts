@@ -217,6 +217,15 @@ export const windowValue = css({
   margin: '0.4rem 0 0',
 })
 
+export const profitStampLink = css({
+  display: 'block',
+  color: 'inherit',
+  textDecoration: 'none',
+  '&[aria-current="true"]': {
+    boxShadow: '4px 4px 0 rgba(28, 22, 16, 0.08), inset 0 3px 0 var(--stamp)',
+  },
+})
+
 export const mutedNote = css({
   margin: '0.2rem 0 0',
   color: 'var(--muted)',

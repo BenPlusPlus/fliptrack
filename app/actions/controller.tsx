@@ -5,10 +5,18 @@ import { getCsrfToken } from 'remix/middleware/csrf'
 
 import { assetServer } from '../assets.ts'
 import {
-  inventoryAcquisitionCostCents,
+  listChannelsInBooks,
   listInventory,
+  listSold,
   listTagsInBooks,
+  loadHomePnl,
 } from '../data/queries.ts'
+import {
+  localToday,
+  parseProfitWindow,
+  parseTodayParam,
+  parseWeekStart,
+} from '../utils/calendar.ts'
 import { databaseContext } from '../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
@@ -29,11 +37,23 @@ export default createController(routes, {
       middleware: [requireOperator()],
       async handler(context) {
         let identity = operatorFrom(context)
-        let inventoryCents = await inventoryAcquisitionCostCents(
+        let today = parseTodayParam(context.url.searchParams.get('today')) ?? localToday()
+        let weekStart = parseWeekStart(context.url.searchParams.get('weekStart'))
+        let selectedWindow = parseProfitWindow(context.url.searchParams.get('window'))
+        let pnl = await loadHomePnl(
           mustGet(context.get(databaseContext), 'database'),
           identity.booksId,
+          { today, weekStart, window: selectedWindow },
         )
-        return context.render(<HomePage identity={identity} inventoryCents={inventoryCents} />)
+        return context.render(
+          <HomePage
+            identity={identity}
+            pnl={pnl}
+            window={selectedWindow}
+            today={today}
+            weekStart={weekStart}
+          />,
+        )
       },
     },
 
@@ -45,8 +65,12 @@ export default createController(routes, {
         let name = context.url.searchParams.get('q') ?? ''
         let untagged = context.url.searchParams.get('untagged') === '1'
         let tagIds = untagged ? [] : context.url.searchParams.getAll('tag')
+        let segment: 'inventory' | 'sold' =
+          context.url.searchParams.get('segment') === 'sold' ? 'sold' : 'inventory'
         let [flips, bookTags] = await Promise.all([
-          listInventory(db, identity.booksId, { name, tagIds, untagged }),
+          segment === 'sold'
+            ? listSold(db, identity.booksId, { name, tagIds, untagged })
+            : listInventory(db, identity.booksId, { name, tagIds, untagged }),
           listTagsInBooks(db, identity.booksId),
         ])
         return context.render(
@@ -55,6 +79,7 @@ export default createController(routes, {
             flips={flips}
             bookTags={bookTags}
             filter={{ name, tagIds, untagged }}
+            segment={segment}
           />,
         )
       },
@@ -64,12 +89,18 @@ export default createController(routes, {
       middleware: [requireOperator()],
       async handler(context) {
         let identity = operatorFrom(context)
-        let tags = await listTagsInBooks(
-          mustGet(context.get(databaseContext), 'database'),
-          identity.booksId,
-        )
+        let db = mustGet(context.get(databaseContext), 'database')
+        let [tags, channels] = await Promise.all([
+          listTagsInBooks(db, identity.booksId),
+          listChannelsInBooks(db, identity.booksId),
+        ])
         return context.render(
-          <AccountPage identity={identity} csrf={getCsrfToken(context)} tags={tags} />,
+          <AccountPage
+            identity={identity}
+            csrf={getCsrfToken(context)}
+            tags={tags}
+            channels={channels}
+          />,
         )
       },
     },

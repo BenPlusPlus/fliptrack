@@ -20,6 +20,10 @@ import flipsController from './actions/flips/controller.tsx'
 import resplitController from './actions/flips/resplit/controller.tsx'
 import tagsController from './actions/tags/controller.tsx'
 import deleteTagController from './actions/tags/delete/controller.tsx'
+import channelsController from './actions/channels/controller.tsx'
+import deleteChannelController from './actions/channels/delete/controller.tsx'
+import salesController from './actions/sales/controller.tsx'
+import newSaleController from './actions/sales/new/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadConfig } from './middleware/config.ts'
 import { loadDatabase } from './middleware/database.ts'
@@ -68,6 +72,10 @@ export function createApp(options: CreateAppOptions) {
   router.map(routes.flips.resplit, resplitController)
   router.map(routes.tags, tagsController)
   router.map(routes.tags.delete, deleteTagController)
+  router.map(routes.channels, channelsController)
+  router.map(routes.channels.delete, deleteChannelController)
+  router.map(routes.sales, salesController)
+  router.map(routes.sales.new, newSaleController)
 
   return { router, db }
 }

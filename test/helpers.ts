@@ -50,6 +50,9 @@ export async function createTestApp(
 }
 
 export async function resetBooks(db: AppDatabase): Promise<void> {
+  await db.exec(sql`delete from sale_flip`)
+  await db.exec(sql`delete from sale`)
+  await db.exec(sql`delete from channel`)
   await db.exec(sql`delete from flip_tag`)
   await db.exec(sql`delete from tag`)
   await db.exec(sql`delete from flip`)

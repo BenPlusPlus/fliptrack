@@ -75,8 +75,50 @@ export const flipTags = table({
   },
 })
 
+export const channels = table({
+  name: 'channel',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    name: c.text().notNull(),
+  },
+})
+
+export const sales = table({
+  name: 'sale',
+  columns: {
+    id: c.uuid().primaryKey(),
+    books_id: c.uuid().notNull().references('books', 'id'),
+    channel_id: c.uuid().notNull().references('channel', 'id'),
+    sale_date: c.date().notNull(),
+    sale_price: c.integer().notNull(),
+    buyer_paid_shipping: c.integer().notNull(),
+    marketplace_fee: c.integer().notNull(),
+    outbound_shipping: c.integer().notNull(),
+    supplies: c.integer().notNull(),
+    notes: c.text(),
+  },
+})
+
+export const saleFlips = table({
+  name: 'sale_flip',
+  primaryKey: ['sale_id', 'flip_id'],
+  columns: {
+    books_id: c.uuid().notNull().references('books', 'id'),
+    sale_id: c.uuid().notNull().references('sale', 'id'),
+    flip_id: c.uuid().notNull().references('flip', 'id'),
+    undone: c.boolean().notNull(),
+    hitch_marketplace_fee: c.integer(),
+    hitch_outbound_shipping: c.integer(),
+    hitch_supplies: c.integer(),
+  },
+})
+
 export type Books = TableRow<typeof books>
 export type Operator = TableRow<typeof operators>
 export type Acquisition = TableRow<typeof acquisitions>
 export type Flip = TableRow<typeof flips>
 export type Tag = TableRow<typeof tags>
+export type Channel = TableRow<typeof channels>
+export type Sale = TableRow<typeof sales>
+export type SaleFlip = TableRow<typeof saleFlips>

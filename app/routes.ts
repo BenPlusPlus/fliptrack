@@ -17,6 +17,15 @@ export const routes = route({
     rename: post('/'),
     delete: form('delete'),
   }),
+  channels: route('/channels/:channelId', {
+    rename: post('/'),
+    delete: form('delete'),
+  }),
+  sales: {
+    new: form('/sales/new'),
+    show: get('/sales/:saleId'),
+    update: post('/sales/:saleId'),
+  },
   flips: {
     show: get('/flips/:flipId'),
     update: post('/flips/:flipId'),

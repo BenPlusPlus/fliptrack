@@ -21,16 +21,31 @@ export function InventoryPage(handle: {
     flips: Flip[]
     bookTags: Tag[]
     filter: { name: string; tagIds: string[]; untagged: boolean }
+    segment: 'inventory' | 'sold'
   }
 }) {
   return () => {
-    let { identity, flips, bookTags, filter } = handle.props
+    let { identity, flips, bookTags, filter, segment } = handle.props
     let selected = new Set(filter.tagIds)
+    let sold = segment === 'sold'
 
     return (
-      <AppShell title="Inventory" identity={identity} current="inventory">
-        <h1 mix={heading}>Inventory</h1>
+      <AppShell title={sold ? 'Sold' : 'Inventory'} identity={identity} current="inventory">
+        <h1 mix={heading}>{sold ? 'Sold' : 'Inventory'}</h1>
+        <p>
+          <a
+            href={inventoryHref('inventory', filter)}
+            aria-current={!sold ? 'page' : undefined}
+          >
+            Inventory
+          </a>
+          {' | '}
+          <a href={inventoryHref('sold', filter)} aria-current={sold ? 'page' : undefined}>
+            Sold
+          </a>
+        </p>
         <form method="get" action={routes.inventory.href()} mix={fieldStack}>
+          {sold ? <input type="hidden" name="segment" value="sold" /> : null}
           <label mix={labelStyle}>
             Name
             <input
@@ -80,6 +95,8 @@ export function InventoryPage(handle: {
           <p mix={lead}>
             {filter.name !== '' || filter.untagged || filter.tagIds.length > 0 ? (
               'No Flips match.'
+            ) : sold ? (
+              'No sold Flips yet.'
             ) : (
               <>
                 Nothing in Inventory yet.{' '}
@@ -87,14 +104,32 @@ export function InventoryPage(handle: {
               </>
             )}
           </p>
-        ) : (
-          <ol mix={inventoryList} id="inventory-list">
+        ) : sold ? (
+          <ol mix={inventoryList} id="sold-list">
             {flips.map((flip) => (
               <li key={flip.id} mix={inventoryItem} data-name={flip.name}>
                 <a href={routes.flips.show.href({ flipId: flip.id })}>{flip.name}</a>
               </li>
             ))}
           </ol>
+        ) : (
+          <form method="get" action={routes.sales.new.index.href()}>
+            <ol mix={inventoryList} id="inventory-list">
+              {flips.map((flip) => (
+                <li key={flip.id} mix={inventoryItem} data-name={flip.name}>
+                  <label>
+                    <input type="checkbox" name="flip" value={flip.id} />{' '}
+                    <a href={routes.flips.show.href({ flipId: flip.id })}>{flip.name}</a>
+                  </label>
+                </li>
+              ))}
+            </ol>
+            <p mix={ctaRow}>
+              <button type="submit" mix={primaryAction}>
+                Sold
+              </button>
+            </p>
+          </form>
         )}
         <p mix={ctaRow}>
           <a href={routes.acquisitions.new.index.href()} mix={primaryAction}>
@@ -102,9 +137,31 @@ export function InventoryPage(handle: {
           </a>
         </p>
         <script>
-          {`(function(){var i=document.getElementById('inventory-name-filter');var list=document.getElementById('inventory-list');if(!i||!list)return;i.addEventListener('input',function(){var q=i.value.trim().toLowerCase();for(var n=0;n<list.children.length;n++){var li=list.children[n];var name=(li.getAttribute('data-name')||'').toLowerCase();li.hidden=q!==''&&name.indexOf(q)===-1;}});})();`}
+          {`(function(){var i=document.getElementById('inventory-name-filter');var list=document.getElementById('inventory-list')||document.getElementById('sold-list');if(!i||!list)return;i.addEventListener('input',function(){var q=i.value.trim().toLowerCase();for(var n=0;n<list.children.length;n++){var li=list.children[n];var name=(li.getAttribute('data-name')||'').toLowerCase();li.hidden=q!==''&&name.indexOf(q)===-1;}});})();`}
         </script>
       </AppShell>
     )
   }
+}
+
+function inventoryHref(
+  segment: 'inventory' | 'sold',
+  filter: { name: string; tagIds: string[]; untagged: boolean },
+): string {
+  let params = new URLSearchParams()
+  if (segment === 'sold') {
+    params.set('segment', 'sold')
+  }
+  if (filter.name !== '') {
+    params.set('q', filter.name)
+  }
+  if (filter.untagged) {
+    params.set('untagged', '1')
+  } else {
+    for (let tagId of filter.tagIds) {
+      params.append('tag', tagId)
+    }
+  }
+  let query = params.toString()
+  return query === '' ? routes.inventory.href() : `${routes.inventory.href()}?${query}`
 }

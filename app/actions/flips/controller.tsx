@@ -12,6 +12,7 @@ import {
 import { databaseContext } from '../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../middleware/auth.ts'
+import type { StandingSaleOnFlip } from '../../data/queries.ts'
 import type { Acquisition, Flip, Tag } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
@@ -29,7 +30,7 @@ import {
   tagSection,
 } from '../../ui/styles.ts'
 import { mustGet } from '../../utils/context.ts'
-import { centsToInput, parseCents } from '../../utils/cents.ts'
+import { centsToInput, formatCents, parseCents } from '../../utils/cents.ts'
 
 export default createController(routes.flips, {
   middleware: [requireOperator()],
@@ -53,6 +54,10 @@ export default createController(routes.flips, {
           tags={hub.tags}
           bookTags={hub.bookTags}
           parent={hub.parent}
+          standing={hub.standing}
+          inboundFrozen={hub.inboundFrozen}
+          mayRemove={hub.mayRemove}
+          isInventory={hub.isInventory}
         />,
       )
     },
@@ -67,7 +72,8 @@ export default createController(routes.flips, {
       if (!hub) {
         return new Response('Not Found', { status: 404 })
       }
-      let { flip, acquisition, tags, bookTags, parent } = hub
+      let { flip, acquisition, tags, bookTags, parent, standing, inboundFrozen, mayRemove, isInventory } =
+        hub
 
       let formData = context.get(FormData)
       let name = String(formData.get('name') ?? '').trim()
@@ -86,6 +92,10 @@ export default createController(routes.flips, {
             tags={tags}
             bookTags={bookTags}
             parent={parent}
+            standing={standing}
+            inboundFrozen={inboundFrozen}
+            mayRemove={mayRemove}
+            isInventory={isInventory}
             error={
               name === ''
                 ? 'Flip name is required.'
@@ -181,6 +191,10 @@ function FlipHubPage(handle: {
     tags: Tag[]
     bookTags: Tag[]
     parent: Flip | null
+    standing: StandingSaleOnFlip | null
+    inboundFrozen: boolean
+    mayRemove: boolean
+    isInventory: boolean
     error?: string
     values?: {
       name: string
@@ -192,9 +206,21 @@ function FlipHubPage(handle: {
   }
 }) {
   return () => {
-    let { identity, csrf, flip, acquisition, tags, bookTags, parent, error, values } =
-      handle.props
-    let inboundFrozen = flip.retired
+    let {
+      identity,
+      csrf,
+      flip,
+      acquisition,
+      tags,
+      bookTags,
+      parent,
+      standing,
+      inboundFrozen,
+      mayRemove,
+      isInventory,
+      error,
+      values,
+    } = handle.props
 
     return (
       <AppShell title={flip.name} identity={identity} current="inventory">
@@ -204,6 +230,13 @@ function FlipHubPage(handle: {
           <p mix={mutedNote}>
             Re-split from{' '}
             <a href={routes.flips.show.href({ flipId: parent.id })}>{parent.name}</a>
+          </p>
+        ) : null}
+        {standing ? (
+          <p mix={mutedNote}>
+            Profit {formatCents(standing.profitCents)}
+            {' · '}
+            <a href={routes.sales.show.href({ saleId: standing.sale.id })}>Sale</a>
           </p>
         ) : null}
         {error ? <p mix={errorBanner}>{error}</p> : null}
@@ -318,7 +351,17 @@ function FlipHubPage(handle: {
             Add Flips to this Acquisition
           </a>
         </p>
-        {!flip.retired ? (
+        {isInventory ? (
+          <p mix={leaveRow}>
+            <a
+              href={`${routes.sales.new.index.href()}?flip=${flip.id}`}
+              mix={ghostAction}
+            >
+              Sold
+            </a>
+          </p>
+        ) : null}
+        {isInventory ? (
           <p mix={leaveRow}>
             <a
               href={routes.flips.resplit.index.href({ flipId: flip.id })}
@@ -328,7 +371,7 @@ function FlipHubPage(handle: {
             </a>
           </p>
         ) : null}
-        {!flip.retired ? (
+        {mayRemove ? (
           <form method="post" action={routes.flips.remove.href({ flipId: flip.id })}>
             <input type="hidden" name="_csrf" value={csrf} />
             <button type="submit" mix={ghostAction}>
