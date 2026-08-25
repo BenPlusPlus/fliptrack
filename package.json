@@ -9,8 +9,8 @@
     "start": "node --import remix/node-tsx server.ts",
     "test": "remix test",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "remix db migrate",
-    "db:status": "remix db status"
+    "db:migrate": "node --import ./load-dev-env.ts ./node_modules/remix/dist/cli-entry.js db migrate",
+    "db:status": "node --import ./load-dev-env.ts ./node_modules/remix/dist/cli-entry.js db status"
   },
   "engines": {
     "node": ">=24.3.0",
