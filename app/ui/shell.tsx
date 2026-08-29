@@ -16,6 +16,7 @@ import {
   appMain,
   contentColumn,
   focusColumn,
+  focusColumnWide,
   hideOnDesktop,
   hideOnMobile,
   inspectBanner,
@@ -45,15 +46,18 @@ export function AppShell(
     csrf?: string
     current?: NavKey
     hideNav?: boolean
+    wideFocus?: boolean
     actions?: RemixNode
     children?: RemixNode
   }>,
 ) {
   return () => {
-    let { title, identity, csrf, current, hideNav, actions, children } = handle.props
+    let { title, identity, csrf, current, hideNav, wideFocus, actions, children } = handle.props
     let inspecting = identity?.inspecting
     let showNav = identity != null && !hideNav
     let homeHref = identity ? routes.home.href() : routes.login.index.href()
+    let column =
+      identity != null && hideNav ? (wideFocus ? focusColumnWide : focusColumn) : contentColumn
 
     return (
       <Document title={`${title} · Fliptrack`}>
@@ -71,7 +75,7 @@ export function AppShell(
                 {actions ? <div mix={[topBarActions, hideOnMobile]}>{actions}</div> : null}
               </div>
             </header>
-            <main mix={identity != null && hideNav ? focusColumn : contentColumn}>
+            <main mix={column}>
               {inspecting ? (
                 <div mix={inspectBanner} role="status">
                   <span>Viewing {inspecting.email} — read only</span>
