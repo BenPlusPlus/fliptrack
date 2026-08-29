@@ -1,3 +1,4 @@
+import { css } from 'remix/ui'
 import { Session } from 'remix/session'
 import { getCsrfToken } from 'remix/middleware/csrf'
 import { createController } from 'remix/router'
@@ -12,11 +13,19 @@ import {
 import { databaseContext } from '../../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../../middleware/auth.ts'
-import type { Tag } from '../../../data/schema.ts'
+import type { Acquisition, Tag } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
 import { ActionStack, MoneyField, PageHeader, Receipt } from '../../../ui/components.tsx'
-import { errorBanner, fieldGrid, fieldWide, ghostAction, labelStyle, primaryAction } from '../../../ui/styles.ts'
+import {
+  FONT_MONEY,
+  errorBanner,
+  fieldGrid,
+  fieldWide,
+  ghostAction,
+  labelStyle,
+  primaryAction,
+} from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
 import { SITTING_KEY, type Sitting } from '../sitting.ts'
@@ -43,7 +52,7 @@ export default createController(routes.acquisitions.addFlip, {
         <AddFlipPage
           identity={identity}
           csrf={getCsrfToken(context)}
-          acquisitionId={acquisition.id}
+          acquisition={acquisition}
           bookTags={bookTags}
         />,
       )
@@ -73,7 +82,7 @@ export default createController(routes.acquisitions.addFlip, {
           <AddFlipPage
             identity={identity}
             csrf={csrf}
-            acquisitionId={acquisition.id}
+            acquisition={acquisition}
             bookTags={bookTags}
             error={
               name === ''
@@ -150,22 +159,30 @@ function AddFlipPage(handle: {
   props: {
     identity: OperatorIdentity
     csrf: string
-    acquisitionId: string
+    acquisition: Acquisition
     bookTags: Tag[]
     error?: string
     values?: { name: string; notes: string; itemCost: string; tag?: string }
   }
 }) {
   return () => {
-    let { identity, csrf, acquisitionId, bookTags, error, values } = handle.props
-    let action = routes.acquisitions.addFlip.action.href({ acquisitionId })
+    let { identity, csrf, acquisition, bookTags, error, values } = handle.props
+    let action = routes.acquisitions.addFlip.action.href({ acquisitionId: acquisition.id })
+    let date = String(acquisition.acquisition_date)
+    let notes =
+      typeof acquisition.notes === 'string' && acquisition.notes !== '' ? acquisition.notes : null
+    let firstLand = error == null && values == null
 
     return (
       <AppShell title="Add Flip" identity={identity} csrf={csrf} hideNav>
-        <PageHeader
-          title="Add a Flip"
-          lead="Name and Item cost are required. Flip notes and Tags are skippable. Stay until you leave."
-        />
+        <PageHeader title="Add a Flip">
+          <div mix={firstLand ? [dateLine, dateLineEnter] : dateLine}>
+            <time dateTime={date} mix={dateLineDate}>
+              {date}
+            </time>
+            {notes ? <p mix={dateLineNotes}>{notes}</p> : null}
+          </div>
+        </PageHeader>
         {error ? <p mix={errorBanner}>{error}</p> : null}
         <Receipt>
           <form method="post" action={action} mix={fieldGrid}>
@@ -176,6 +193,7 @@ function AddFlipPage(handle: {
                 type="text"
                 name="name"
                 required
+                autoFocus={firstLand ? true : undefined}
                 defaultValue={values?.name ?? ''}
                 autoComplete="off"
               />
@@ -211,7 +229,10 @@ function AddFlipPage(handle: {
                   Save Flip
                 </button>
               )}
-              <a href={routes.acquisitions.show.href({ acquisitionId })} mix={ghostAction}>
+              <a
+                href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}
+                mix={ghostAction}
+              >
                 Leave
               </a>
             </ActionStack>
@@ -221,3 +242,40 @@ function AddFlipPage(handle: {
     )
   }
 }
+
+const dateLine = css({
+  display: 'grid',
+  gap: '0.2rem 1rem',
+  margin: '0.1rem 0 0',
+  minWidth: 0,
+  '@media (min-width: 48rem)': {
+    gridTemplateColumns: 'auto minmax(0, 1fr)',
+    alignItems: 'start',
+  },
+})
+
+const dateLineEnter = css({
+  animation: 'ft-rise 220ms ease both',
+})
+
+const dateLineDate = css({
+  fontFamily: FONT_MONEY,
+  fontVariantNumeric: 'tabular-nums',
+  fontSize: '0.78rem',
+  letterSpacing: '0.06em',
+  color: 'var(--muted)',
+  lineHeight: 1.4,
+})
+
+const dateLineNotes = css({
+  margin: 0,
+  color: 'var(--muted)',
+  fontSize: '0.93rem',
+  lineHeight: 1.4,
+  minWidth: 0,
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: '2',
+  lineClamp: '2',
+  overflow: 'hidden',
+})
