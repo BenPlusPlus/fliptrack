@@ -19,6 +19,7 @@ export const assetServer = createAssetServer({
     'app/ui/components.tsx',
     'app/ui/styles.ts',
     'app/utils/cents.ts',
+    'app/utils/calendar.ts',
   ],
   allowPackages: ['remix'],
   denyFiles: ['app/**/*.test.*'],

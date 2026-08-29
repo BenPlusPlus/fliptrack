@@ -3,6 +3,7 @@ import type { KitFlip } from '../../data/queries.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
 import { ActionStack, MoneyField, PageHeader, Receipt, SectionLabel, Stamp } from '../../ui/components.tsx'
+import { DateInput } from '../../ui/public/date-input.tsx'
 import {
   checkRow,
   errorBanner,
@@ -90,11 +91,11 @@ export function WriteOffPage(handle: {
               <div mix={fieldStack}>
                 <label mix={labelStyle}>
                   Write-off date
-                  <input
+                  <DateInput
                     id="write_off_date"
-                    type="date"
                     name="write_off_date"
                     required
+                    defaultToToday
                     defaultValue={values?.writeOffDate ?? ''}
                   />
                 </label>
@@ -127,9 +128,6 @@ export function WriteOffPage(handle: {
             </a>
           </ActionStack>
         </form>
-        <script>
-          {`(function(){var i=document.getElementById('write_off_date');if(!i||i.value)return;var d=new Date();var m=String(d.getMonth()+1).padStart(2,'0');var day=String(d.getDate()).padStart(2,'0');i.value=d.getFullYear()+'-'+m+'-'+day;})();`}
-        </script>
       </AppShell>
     )
   }

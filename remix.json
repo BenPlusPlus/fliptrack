@@ -10,10 +10,11 @@
     }
   },
   "test": {
-    "files": ["**/*.test{,.browser}.{ts,tsx}"],
+    "files": ["**/*.test{,.browser,.e2e}.{ts,tsx}"],
     "browserFiles": ["**/*.test.browser.{ts,tsx}"],
+    "e2eFiles": ["**/*.test.e2e.{ts,tsx}"],
     "exclude": ["node_modules/**", "dist/**"],
-    "type": ["server", "browser"],
+    "type": ["server", "browser", "e2e"],
     "concurrency": 1,
     "setup": "./test/setup.ts"
   }
