@@ -1,4 +1,3 @@
-import { css } from 'remix/ui'
 import { Session } from 'remix/session'
 import { getCsrfToken } from 'remix/middleware/csrf'
 import { createController } from 'remix/router'
@@ -18,25 +17,10 @@ import type { Acquisition, Tag } from '../../../data/schema.ts'
 import type { AppDatabase } from '../../../data/db.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
-import { ActionStack, Money, MoneyField, PageHeader, Receipt, SectionLabel } from '../../../ui/components.tsx'
-import {
-  FONT_MONEY,
-  errorBanner,
-  fieldGrid,
-  fieldWide,
-  ghostAction,
-  labelStyle,
-  primaryAction,
-  revealStagger,
-} from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
 import { SITTING_KEY, sittingFor, type Sitting } from '../sitting.ts'
-
-const SITTING_PHONE_CAP = 3
-const SITTING_DESK_CAP = 5
-
-type SittingFlip = { id: string; name: string; itemCost: number }
+import { AddFlipForm, SITTING_DESK_CAP, type SittingFlip } from './public/add-flip-form.tsx'
 
 export default createController(routes.acquisitions.addFlip, {
   middleware: [requireOperator()],
@@ -54,10 +38,11 @@ export default createController(routes.acquisitions.addFlip, {
 
       let bookTags = await listTagsInBooks(db, identity.booksId)
       let session = mustGet(context.get(Session), 'session')
+      let sitting = sittingFor(session.get(SITTING_KEY), acquisition.id)
       let sittingFlips = await loadSittingFlips(db, {
         booksId: identity.booksId,
         acquisitionId: acquisition.id,
-        sitting: sittingFor(session.get(SITTING_KEY), acquisition.id),
+        sitting,
       })
 
       return context.render(
@@ -67,6 +52,7 @@ export default createController(routes.acquisitions.addFlip, {
           acquisition={acquisition}
           bookTags={bookTags}
           sittingFlips={sittingFlips}
+          trackSitting={sitting != null}
           revealSitting
         />,
       )
@@ -106,6 +92,7 @@ export default createController(routes.acquisitions.addFlip, {
             acquisition={acquisition}
             bookTags={bookTags}
             sittingFlips={sittingFlips}
+            trackSitting={sitting != null}
             error={
               name === ''
                 ? 'Flip name is required.'
@@ -148,6 +135,10 @@ export default createController(routes.acquisitions.addFlip, {
         })
       }
 
+      if (context.request.headers.get('Sec-Fetch-Dest') === 'empty') {
+        return new Response(null, { status: 204 })
+      }
+
       return redirect(
         routes.acquisitions.addFlip.index.href({ acquisitionId: acquisition.id }),
         303,
@@ -186,238 +177,42 @@ function AddFlipPage(handle: {
     acquisition: Acquisition
     bookTags: Tag[]
     sittingFlips: SittingFlip[]
+    trackSitting?: boolean
     revealSitting?: boolean
     error?: string
     values?: { name: string; notes: string; itemCost: string; tag?: string }
   }
 }) {
   return () => {
-    let { identity, csrf, acquisition, bookTags, sittingFlips, revealSitting, error, values } =
+    let { identity, csrf, acquisition, bookTags, sittingFlips, trackSitting, revealSitting, error, values } =
       handle.props
-    let action = routes.acquisitions.addFlip.action.href({ acquisitionId: acquisition.id })
-    let date = String(acquisition.acquisition_date)
     let notes =
       typeof acquisition.notes === 'string' && acquisition.notes !== '' ? acquisition.notes : null
-    let firstLand = error == null && values == null
-    let showStrip = sittingFlips.length > 0
-
-    let header = (
-      <PageHeader title="Add a Flip">
-        <div mix={firstLand ? [dateLine, dateLineEnter] : dateLine}>
-          <time dateTime={date} mix={dateLineDate}>
-            {date}
-          </time>
-          {notes ? <p mix={dateLineNotes}>{notes}</p> : null}
-        </div>
-      </PageHeader>
-    )
-
-    let form = (
-      <>
-        {error ? <p mix={errorBanner}>{error}</p> : null}
-        <Receipt>
-          <form method="post" action={action} mix={fieldGrid}>
-            <input type="hidden" name="_csrf" value={csrf} />
-            <label mix={[labelStyle, fieldWide]}>
-              Flip name
-              <input
-                type="text"
-                name="name"
-                required
-                autoFocus={firstLand ? true : undefined}
-                defaultValue={values?.name ?? ''}
-                autoComplete="off"
-              />
-            </label>
-            <MoneyField
-              label="Item cost"
-              name="item_cost"
-              required
-              defaultValue={values?.itemCost}
-            />
-            <label mix={labelStyle}>
-              Tag
-              <input
-                type="text"
-                name="tag"
-                list="tag-names"
-                autoComplete="off"
-                defaultValue={values?.tag ?? ''}
-              />
-            </label>
-            <label mix={[labelStyle, fieldWide]}>
-              Flip notes
-              <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
-            </label>
-            <datalist id="tag-names">
-              {bookTags.map((tag) => (
-                <option key={tag.id} value={tag.name}></option>
-              ))}
-            </datalist>
-            <ActionStack>
-              {identity.inspecting ? null : (
-                <button type="submit" mix={primaryAction}>
-                  Save Flip
-                </button>
-              )}
-              <a
-                href={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}
-                mix={ghostAction}
-              >
-                Leave
-              </a>
-            </ActionStack>
-          </form>
-        </Receipt>
-      </>
-    )
 
     return (
-      <AppShell title="Add Flip" identity={identity} csrf={csrf} hideNav wideFocus={showStrip}>
-        {showStrip ? (
-          <div mix={addFlipLayout}>
-            <div mix={addFlipHead}>{header}</div>
-            <SittingStrip flips={sittingFlips} reveal={revealSitting === true} />
-            <div mix={addFlipForm}>{form}</div>
-          </div>
-        ) : (
-          <>
-            {header}
-            {form}
-          </>
-        )}
+      <AppShell
+        title="Add Flip"
+        identity={identity}
+        csrf={csrf}
+        hideNav
+        wideFocus={sittingFlips.length > 0}
+      >
+        <AddFlipForm
+          csrf={csrf}
+          action={routes.acquisitions.addFlip.action.href({ acquisitionId: acquisition.id })}
+          leaveHref={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}
+          inspecting={identity.inspecting != null}
+          tagNames={bookTags.map((tag) => tag.name)}
+          acquisitionDate={String(acquisition.acquisition_date)}
+          acquisitionNotes={notes}
+          sittingFlips={sittingFlips.slice(0, SITTING_DESK_CAP)}
+          sittingTotal={sittingFlips.length}
+          trackSitting={trackSitting === true}
+          revealSitting={revealSitting === true}
+          error={error}
+          values={values}
+        />
       </AppShell>
     )
   }
 }
-
-function SittingStrip(handle: { props: { flips: SittingFlip[]; reveal: boolean } }) {
-  return () => {
-    let { flips, reveal } = handle.props
-    let visible = flips.slice(0, SITTING_DESK_CAP)
-    let phoneMore = flips.length - SITTING_PHONE_CAP
-    let deskMore = flips.length - SITTING_DESK_CAP
-
-    return (
-      <section mix={addFlipStrip}>
-        <SectionLabel>This sitting</SectionLabel>
-        <ol mix={reveal ? [sittingList, revealStagger] : sittingList}>
-          {visible.map((flip) => (
-            <li key={flip.id} mix={sittingRow}>
-              <span mix={sittingName}>{flip.name}</span>
-              <Money cents={flip.itemCost} tone="flat" />
-            </li>
-          ))}
-        </ol>
-        {phoneMore > 0 ? <p mix={sittingMorePhone}>{phoneMore} more</p> : null}
-        {deskMore > 0 ? <p mix={sittingMoreDesk}>{deskMore} more</p> : null}
-      </section>
-    )
-  }
-}
-
-const dateLine = css({
-  display: 'grid',
-  gap: '0.2rem 1rem',
-  margin: '0.1rem 0 0',
-  minWidth: 0,
-  '@media (min-width: 48rem)': {
-    gridTemplateColumns: 'auto minmax(0, 1fr)',
-    alignItems: 'start',
-  },
-})
-
-const dateLineEnter = css({
-  animation: 'ft-rise 220ms ease both',
-})
-
-const dateLineDate = css({
-  fontFamily: FONT_MONEY,
-  fontVariantNumeric: 'tabular-nums',
-  fontSize: '0.78rem',
-  letterSpacing: '0.06em',
-  color: 'var(--muted)',
-  lineHeight: 1.4,
-})
-
-const dateLineNotes = css({
-  margin: 0,
-  color: 'var(--muted)',
-  fontSize: '0.93rem',
-  lineHeight: 1.4,
-  minWidth: 0,
-  display: '-webkit-box',
-  WebkitBoxOrient: 'vertical',
-  WebkitLineClamp: '2',
-  lineClamp: '2',
-  overflow: 'hidden',
-})
-
-const addFlipLayout = css({
-  display: 'grid',
-  gap: '1.1rem',
-  minWidth: 0,
-  gridTemplateAreas: `
-    "head"
-    "strip"
-    "form"
-  `,
-  '@media (min-width: 64rem)': {
-    gridTemplateColumns: 'minmax(0, 15rem) minmax(0, 1fr)',
-    gap: '1.75rem',
-    alignItems: 'start',
-    gridTemplateAreas: `
-      "strip head"
-      "strip form"
-    `,
-  },
-})
-
-const addFlipHead = css({ gridArea: 'head', minWidth: 0 })
-const addFlipStrip = css({ gridArea: 'strip', minWidth: 0 })
-const addFlipForm = css({ gridArea: 'form', minWidth: 0 })
-
-const sittingList = css({
-  listStyle: 'none',
-  margin: 0,
-  padding: 0,
-  display: 'grid',
-  [`& > li:nth-child(n+${SITTING_PHONE_CAP + 1})`]: { display: 'none' },
-  '@media (min-width: 64rem)': {
-    [`& > li:nth-child(n+${SITTING_PHONE_CAP + 1})`]: { display: 'grid' },
-    [`& > li:nth-child(n+${SITTING_DESK_CAP + 1})`]: { display: 'none' },
-  },
-})
-
-const sittingRow = css({
-  display: 'grid',
-  gridTemplateColumns: 'minmax(0, 1fr) auto',
-  gap: '0.7rem',
-  alignItems: 'baseline',
-  padding: '0.5rem 0',
-  borderBottom: '1px dashed var(--rule)',
-  minWidth: 0,
-})
-
-const sittingName = css({
-  minWidth: 0,
-  overflowWrap: 'anywhere',
-  fontWeight: 700,
-})
-
-const sittingMore = {
-  margin: '0.5rem 0 0',
-  color: 'var(--muted)',
-  fontSize: '0.85rem',
-}
-
-const sittingMorePhone = css({
-  ...sittingMore,
-  '@media (min-width: 64rem)': { display: 'none' },
-})
-
-const sittingMoreDesk = css({
-  ...sittingMore,
-  display: 'none',
-  '@media (min-width: 64rem)': { display: 'block' },
-})

@@ -11,6 +11,7 @@ import {
   flipHrefFromInventory,
   login,
   openSignup,
+  csrfToken,
   postForm,
   postFormFrom,
   readBody,
@@ -93,6 +94,64 @@ describe('Add a Flip', () => {
       assert.match(html, /<h1[^>]*>Add a Flip<\/h1>/)
       assert.doesNotMatch(html, />Save Flip</)
       assert.match(html, /Viewing second@example.com — read only/)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('keeps the no-JS POST as a 400 with the error banner and typed values', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: 'Saturday haul',
+      })
+      let refused = await postForm(app, started.addHref, {
+        name: '',
+        item_cost: '12.50',
+        notes: 'keep me',
+        tag: 'Vintage',
+      })
+      assert.equal(refused.status, 400)
+      let html = await readBody(refused)
+      assert.match(html, /role="alert"/)
+      assert.match(html, /Flip name is required/)
+      assert.match(html, /value="12\.50"|item_cost[^>]*value="12\.50"/)
+      assert.match(html, />keep me</)
+      assert.match(html, /value="Vintage"|tag[^>]*value="Vintage"/)
+      assert.equal(refused.headers.get('Location'), null)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('returns 204 for a fetch POST and still creates the Flip', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      let page = await fetchPage(app, started.addHref)
+      let html = await readBody(page)
+      let form = new FormData()
+      form.set('_csrf', csrfToken(html))
+      form.set('name', 'Fetch mug')
+      form.set('item_cost', '7')
+      form.set('notes', '')
+      let saved = await fetchPage(app, started.addHref, {
+        method: 'POST',
+        body: form,
+        headers: { 'Sec-Fetch-Dest': 'empty' },
+      })
+      assert.equal(saved.status, 204)
+      assert.equal(saved.headers.get('Location'), null)
+
+      let after = await readBody(await fetchPage(app, started.addHref))
+      assert.match(after, /This sitting/)
+      assert.match(after, /Fetch mug/)
     } finally {
       await app.db.close()
     }

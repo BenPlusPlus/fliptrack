@@ -10,9 +10,10 @@
     }
   },
   "test": {
-    "files": ["**/*.test.{ts,tsx}"],
+    "files": ["**/*.test{,.browser}.{ts,tsx}"],
+    "browserFiles": ["**/*.test.browser.{ts,tsx}"],
     "exclude": ["node_modules/**", "dist/**"],
-    "type": ["server"],
+    "type": ["server", "browser"],
     "concurrency": 1,
     "setup": "./test/setup.ts"
   }
