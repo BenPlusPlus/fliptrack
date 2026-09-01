@@ -20,6 +20,7 @@ export const assetServer = createAssetServer({
     'app/ui/styles.ts',
     'app/utils/cents.ts',
     'app/utils/calendar.ts',
+    'app/utils/resplit.ts',
   ],
   allowPackages: ['remix'],
   denyFiles: ['app/**/*.test.*'],

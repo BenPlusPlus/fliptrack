@@ -27,6 +27,7 @@ import type {
   WriteOff,
 } from './schema.ts'
 import { allocateShares } from '../utils/cents.ts'
+import { RESPLIT_CHILD_CAP, RESPLIT_CHILD_CAP_ERROR } from '../utils/resplit.ts'
 import {
   dateInWindow,
   type ProfitWindowKind,
@@ -596,6 +597,9 @@ export async function resplitFlip(
     }
     if (input.children.length < 2) {
       return { ok: false, error: 'Re-split needs at least two children.' }
+    }
+    if (input.children.length > RESPLIT_CHILD_CAP) {
+      return { ok: false, error: RESPLIT_CHILD_CAP_ERROR }
     }
     let itemSum = input.children.reduce((sum, child) => sum + child.itemCost, 0)
     if (itemSum !== parent.item_cost) {
