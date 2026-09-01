@@ -7,26 +7,28 @@ import {
   addFlipAndSnapshotSitting,
   attachNamedTagToFlip,
   findAcquisitionInBooks,
+  listAcquisitionFlips,
   listTagsInBooks,
 } from '../../../data/queries.ts'
 import { databaseContext } from '../../../middleware/database.ts'
 import { operatorFrom, requireOperator } from '../../../middleware/auth.ts'
 import type { OperatorIdentity } from '../../../middleware/auth.ts'
-import type { Tag } from '../../../data/schema.ts'
+import type { Acquisition, Tag } from '../../../data/schema.ts'
+import type { AppDatabase } from '../../../data/db.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
-import { ActionStack, MoneyField, PageHeader, Receipt } from '../../../ui/components.tsx'
-import { errorBanner, fieldGrid, fieldWide, ghostAction, labelStyle, primaryAction } from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
-import { SITTING_KEY, type Sitting } from '../sitting.ts'
+import { SITTING_KEY, sittingFor, type Sitting } from '../sitting.ts'
+import { AddFlipForm, SITTING_DESK_CAP, type SittingFlip } from './public/add-flip-form.tsx'
 
 export default createController(routes.acquisitions.addFlip, {
   middleware: [requireOperator()],
   actions: {
     async index(context) {
       let identity = operatorFrom(context)
-      let acquisition = await findAcquisitionInBooks(mustGet(context.get(databaseContext), 'database'), {
+      let db = mustGet(context.get(databaseContext), 'database')
+      let acquisition = await findAcquisitionInBooks(db, {
         acquisitionId: context.params.acquisitionId,
         booksId: identity.booksId,
       })
@@ -34,17 +36,24 @@ export default createController(routes.acquisitions.addFlip, {
         return new Response('Not Found', { status: 404 })
       }
 
-      let bookTags = await listTagsInBooks(
-        mustGet(context.get(databaseContext), 'database'),
-        identity.booksId,
-      )
+      let bookTags = await listTagsInBooks(db, identity.booksId)
+      let session = mustGet(context.get(Session), 'session')
+      let sitting = sittingFor(session.get(SITTING_KEY), acquisition.id)
+      let sittingFlips = await loadSittingFlips(db, {
+        booksId: identity.booksId,
+        acquisitionId: acquisition.id,
+        sitting,
+      })
 
       return context.render(
         <AddFlipPage
           identity={identity}
           csrf={getCsrfToken(context)}
-          acquisitionId={acquisition.id}
+          acquisition={acquisition}
           bookTags={bookTags}
+          sittingFlips={sittingFlips}
+          trackSitting={sitting != null}
+          revealSitting
         />,
       )
     },
@@ -67,14 +76,23 @@ export default createController(routes.acquisitions.addFlip, {
       let tagName = String(formData.get('tag') ?? '').trim()
       let itemCost = parseCents(String(formData.get('item_cost') ?? ''), { required: true })
       let bookTags = await listTagsInBooks(db, identity.booksId)
+      let session = mustGet(context.get(Session), 'session')
+      let sitting = sittingFor(session.get(SITTING_KEY), acquisition.id)
 
       if (name === '' || !itemCost.ok) {
+        let sittingFlips = await loadSittingFlips(db, {
+          booksId: identity.booksId,
+          acquisitionId: acquisition.id,
+          sitting,
+        })
         return context.render(
           <AddFlipPage
             identity={identity}
             csrf={csrf}
-            acquisitionId={acquisition.id}
+            acquisition={acquisition}
             bookTags={bookTags}
+            sittingFlips={sittingFlips}
+            trackSitting={sitting != null}
             error={
               name === ''
                 ? 'Flip name is required.'
@@ -92,9 +110,6 @@ export default createController(routes.acquisitions.addFlip, {
           { status: 400 },
         )
       }
-
-      let session = mustGet(context.get(Session), 'session')
-      let sitting = sittingFor(session.get(SITTING_KEY), acquisition.id)
 
       let created = await addFlipAndSnapshotSitting(db, {
         booksId: identity.booksId,
@@ -120,6 +135,10 @@ export default createController(routes.acquisitions.addFlip, {
         })
       }
 
+      if (context.request.headers.get('Sec-Fetch-Dest') === 'empty') {
+        return new Response(null, { status: 204 })
+      }
+
       return redirect(
         routes.acquisitions.addFlip.index.href({ acquisitionId: acquisition.id }),
         303,
@@ -128,95 +147,71 @@ export default createController(routes.acquisitions.addFlip, {
   },
 })
 
-function sittingFor(value: unknown, acquisitionId: string): Sitting | null {
-  if (
-    value &&
-    typeof value === 'object' &&
-    'acquisitionId' in value &&
-    (value as Sitting).acquisitionId === acquisitionId
-  ) {
-    let sitting = value as Sitting
-    return {
-      acquisitionId: sitting.acquisitionId,
-      taxPaid: sitting.taxPaid,
-      inboundShipping: sitting.inboundShipping,
-      flipIds: Array.isArray(sitting.flipIds) ? sitting.flipIds : [],
+async function loadSittingFlips(
+  db: AppDatabase,
+  input: { booksId: string; acquisitionId: string; sitting: Sitting | null },
+): Promise<SittingFlip[]> {
+  if (!input.sitting || input.sitting.flipIds.length === 0) {
+    return []
+  }
+
+  let flips = await listAcquisitionFlips(db, {
+    acquisitionId: input.acquisitionId,
+    booksId: input.booksId,
+  })
+  let byId = new Map(flips.map((flip) => [flip.id, flip]))
+  let rows: SittingFlip[] = []
+  for (let id of [...input.sitting.flipIds].reverse()) {
+    let flip = byId.get(id)
+    if (flip) {
+      rows.push({ id: flip.id, name: flip.name, itemCost: flip.item_cost })
     }
   }
-  return null
+  return rows
 }
 
 function AddFlipPage(handle: {
   props: {
     identity: OperatorIdentity
     csrf: string
-    acquisitionId: string
+    acquisition: Acquisition
     bookTags: Tag[]
+    sittingFlips: SittingFlip[]
+    trackSitting?: boolean
+    revealSitting?: boolean
     error?: string
     values?: { name: string; notes: string; itemCost: string; tag?: string }
   }
 }) {
   return () => {
-    let { identity, csrf, acquisitionId, bookTags, error, values } = handle.props
-    let action = routes.acquisitions.addFlip.action.href({ acquisitionId })
+    let { identity, csrf, acquisition, bookTags, sittingFlips, trackSitting, revealSitting, error, values } =
+      handle.props
+    let notes =
+      typeof acquisition.notes === 'string' && acquisition.notes !== '' ? acquisition.notes : null
 
     return (
-      <AppShell title="Add Flip" identity={identity} csrf={csrf} hideNav>
-        <PageHeader
-          title="Add a Flip"
-          lead="Name and Item cost are required. Flip notes and Tags are skippable. Stay until you leave."
+      <AppShell
+        title="Add Flip"
+        identity={identity}
+        csrf={csrf}
+        hideNav
+        wideFocus={sittingFlips.length > 0}
+      >
+        <AddFlipForm
+          csrf={csrf}
+          action={routes.acquisitions.addFlip.action.href({ acquisitionId: acquisition.id })}
+          leaveHref={routes.acquisitions.show.href({ acquisitionId: acquisition.id })}
+          inspecting={identity.inspecting != null}
+          tagNames={bookTags.map((tag) => tag.name)}
+          acquisitionDate={String(acquisition.acquisition_date)}
+          acquisitionNotes={notes}
+          sittingFlips={sittingFlips.slice(0, SITTING_DESK_CAP)}
+          sittingTotal={sittingFlips.length}
+          trackSitting={trackSitting === true}
+          revealSitting={revealSitting === true}
+          error={error}
+          values={values}
         />
-        {error ? <p mix={errorBanner}>{error}</p> : null}
-        <Receipt>
-          <form method="post" action={action} mix={fieldGrid}>
-            <input type="hidden" name="_csrf" value={csrf} />
-            <label mix={[labelStyle, fieldWide]}>
-              Flip name
-              <input
-                type="text"
-                name="name"
-                required
-                defaultValue={values?.name ?? ''}
-                autoComplete="off"
-              />
-            </label>
-            <MoneyField
-              label="Item cost"
-              name="item_cost"
-              required
-              defaultValue={values?.itemCost}
-            />
-            <label mix={labelStyle}>
-              Tag
-              <input
-                type="text"
-                name="tag"
-                list="tag-names"
-                autoComplete="off"
-                defaultValue={values?.tag ?? ''}
-              />
-            </label>
-            <label mix={[labelStyle, fieldWide]}>
-              Flip notes
-              <textarea name="notes" rows={3} defaultValue={values?.notes ?? ''}></textarea>
-            </label>
-            <datalist id="tag-names">
-              {bookTags.map((tag) => (
-                <option key={tag.id} value={tag.name}></option>
-              ))}
-            </datalist>
-            <ActionStack>
-              {identity.inspecting ? null : (
-                <button type="submit" mix={primaryAction}>
-                  Save Flip
-                </button>
-              )}
-              <a href={routes.acquisitions.show.href({ acquisitionId })} mix={ghostAction}>
-                Leave
-              </a>
-            </ActionStack>
-          </form>
-        </Receipt>
       </AppShell>
     )
   }

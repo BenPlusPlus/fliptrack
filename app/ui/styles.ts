@@ -175,6 +175,15 @@ export const focusColumn = css({
   [DESKTOP_UP]: { width: 'min(42rem, calc(100% - 4rem))', padding: '3rem 0 6rem' },
 })
 
+/* Add a Flip with a sitting strip: same width below 64rem, wider so the split fits. */
+export const focusColumnWide = css({
+  width: 'min(44rem, calc(100% - 2rem))',
+  margin: '0 auto',
+  padding: '1rem 0 4rem',
+  [TABLET_UP]: { width: 'min(40rem, calc(100% - 3rem))', padding: '2rem 0 5rem' },
+  [DESKTOP_UP]: { width: 'min(58rem, calc(100% - 4rem))', padding: '3rem 0 6rem' },
+})
+
 /* Kept for compatibility with any view not yet migrated. */
 export const page = contentColumn
 

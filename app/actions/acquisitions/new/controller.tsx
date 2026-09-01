@@ -10,6 +10,7 @@ import type { OperatorIdentity } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import { AppShell } from '../../../ui/shell.tsx'
 import { ActionStack, MoneyField, PageHeader, Receipt } from '../../../ui/components.tsx'
+import { DateInput } from '../../../ui/public/date-input.tsx'
 import { errorBanner, fieldGrid, fieldWide, ghostAction, labelStyle, primaryAction } from '../../../ui/styles.ts'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
@@ -111,11 +112,11 @@ function NewAcquisitionPage(handle: {
             <input type="hidden" name="_csrf" value={csrf} />
             <label mix={[labelStyle, fieldWide]}>
               Acquisition date
-              <input
+              <DateInput
                 id="acquisition_date"
-                type="date"
                 name="acquisition_date"
                 required
+                defaultToToday
                 defaultValue={values?.acquisitionDate ?? ''}
               />
             </label>
@@ -141,9 +142,6 @@ function NewAcquisitionPage(handle: {
             </ActionStack>
           </form>
         </Receipt>
-        <script>
-          {`(function(){var i=document.getElementById('acquisition_date');if(!i||i.value)return;var d=new Date();var m=String(d.getMonth()+1).padStart(2,'0');var day=String(d.getDate()).padStart(2,'0');i.value=d.getFullYear()+'-'+m+'-'+day;})();`}
-        </script>
       </AppShell>
     )
   }
