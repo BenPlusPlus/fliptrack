@@ -1,5 +1,8 @@
+import { css } from 'remix/ui'
+
 import type { OperatorIdentity } from '../../middleware/auth.ts'
 import type { Acquisition, Flip } from '../../data/schema.ts'
+import { acquisitionCostCents } from '../../data/queries.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
 import {
@@ -11,6 +14,7 @@ import {
   SectionLabel,
 } from '../../ui/components.tsx'
 import {
+  dashRule,
   displayTitle,
   ghostAction,
   ledgerList,
@@ -22,6 +26,23 @@ import {
   sectionBlock,
   splitLayout,
 } from '../../ui/styles.ts'
+
+const costBreakdown = css({
+  display: 'grid',
+  gap: '0.45rem',
+  margin: 0,
+  padding: 0,
+  '& dt, & dd': { margin: 0 },
+})
+
+const costLine = css({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: '0.7rem',
+  color: 'var(--muted)',
+  fontSize: '0.93rem',
+})
 
 export function AcquisitionPage(handle: {
   props: {
@@ -38,7 +59,16 @@ export function AcquisitionPage(handle: {
     let date = String(acquisition.acquisition_date)
     let notes =
       typeof acquisition.notes === 'string' && acquisition.notes !== '' ? acquisition.notes : null
-    let totalCost = flips.reduce((sum, flip) => sum + flip.item_cost, 0)
+    let itemCost = 0
+    let taxPaid = 0
+    let inboundShipping = 0
+    let acquisitionCost = 0
+    for (let flip of flips) {
+      itemCost += flip.item_cost
+      taxPaid += flip.tax_paid
+      inboundShipping += flip.inbound_shipping
+      acquisitionCost += acquisitionCostCents(flip)
+    }
 
     return (
       <AppShell title={title} identity={identity} csrf={csrf} current="acquisitions">
@@ -54,8 +84,29 @@ export function AcquisitionPage(handle: {
               <p mix={[moneyMd, moneyFlat]}>{flips.length}</p>
             </div>
             <div mix={sectionBlock}>
-              <SectionLabel>Item cost</SectionLabel>
-              <Money cents={totalCost} tone="flat" size="md" block />
+              <SectionLabel>Acquisition cost</SectionLabel>
+              <Money cents={acquisitionCost} tone="flat" size="md" block />
+              <hr mix={dashRule} />
+              <dl mix={costBreakdown}>
+                <div mix={costLine}>
+                  <dt>Item cost</dt>
+                  <dd>
+                    <Money cents={itemCost} tone="flat" />
+                  </dd>
+                </div>
+                <div mix={costLine}>
+                  <dt>Tax paid</dt>
+                  <dd>
+                    <Money cents={taxPaid} tone="flat" />
+                  </dd>
+                </div>
+                <div mix={costLine}>
+                  <dt>Inbound shipping</dt>
+                  <dd>
+                    <Money cents={inboundShipping} tone="flat" />
+                  </dd>
+                </div>
+              </dl>
             </div>
           </Receipt>
           <div>
