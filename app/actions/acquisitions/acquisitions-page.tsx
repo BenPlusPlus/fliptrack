@@ -1,7 +1,7 @@
 import { css } from 'remix/ui'
 
 import type { OperatorIdentity } from '../../middleware/auth.ts'
-import type { AcquisitionIndexRow } from '../../data/queries.ts'
+import { acquisitionCostCents, type AcquisitionIndexRow } from '../../data/queries.ts'
 import { routes } from '../../routes.ts'
 import { AppShell } from '../../ui/shell.tsx'
 import { EmptyState, LedgerCell, Money, PageHeader } from '../../ui/components.tsx'
@@ -91,7 +91,7 @@ export function AcquisitionsPage(handle: {
                 typeof row.acquisition.notes === 'string' && row.acquisition.notes !== ''
                   ? row.acquisition.notes
                   : null
-              let totalCost = row.flips.reduce((sum, flip) => sum + flip.item_cost, 0)
+              let totalCost = row.flips.reduce((sum, flip) => sum + acquisitionCostCents(flip), 0)
               return (
                 <li key={row.acquisition.id} mix={[ledgerTableRow, acquisitionColumns]}>
                   <div>

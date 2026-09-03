@@ -83,6 +83,47 @@ describe('Acquisitions index', () => {
       )
       assert.match(showHtml, /Add Flips to this Acquisition/)
       assert.match(showHtml, hrefAttr(newerFlipHref))
+      assert.match(showHtml, /Acquisition cost/)
+      assert.match(showHtml, /Item cost/)
+      assert.match(showHtml, /Tax paid/)
+      assert.match(showHtml, /Inbound shipping/)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('prints haul Acquisition cost from live Flip sums on the show page and index', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let created = await acquireFlip(app, {
+        name: 'Taxed lamp',
+        itemCost: '10',
+        taxPaid: '2',
+        inboundShipping: '3',
+      })
+
+      let indexHtml = await readBody(await fetchPage(app, routes.acquisitions.index.href()))
+      assert.match(indexHtml, /\$15\.00/)
+      assert.doesNotMatch(indexHtml, /\$10\.00/)
+
+      let showHtml = await readBody(
+        await fetchPage(app, routes.acquisitions.show.href({ acquisitionId: created.acquisitionId })),
+      )
+      let acquisitionCostAt = showHtml.indexOf('Acquisition cost')
+      let itemCostAt = showHtml.indexOf('Item cost')
+      let taxPaidAt = showHtml.indexOf('Tax paid')
+      let inboundAt = showHtml.indexOf('Inbound shipping')
+      assert.ok(acquisitionCostAt >= 0)
+      assert.ok(itemCostAt > acquisitionCostAt)
+      assert.ok(taxPaidAt > itemCostAt)
+      assert.ok(inboundAt > taxPaidAt)
+      assert.match(showHtml, /\$15\.00/)
+      assert.match(showHtml, /\$10\.00/)
+      assert.match(showHtml, /\$2\.00/)
+      assert.match(showHtml, /\$3\.00/)
+      assert.match(showHtml, /Taxed lamp<\/a>[\s\S]{0,200}\$10\.00/)
+      assert.doesNotMatch(showHtml, /Taxed lamp<\/a>[\s\S]{0,200}\$15\.00/)
     } finally {
       await app.db.close()
     }
