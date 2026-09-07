@@ -2015,6 +2015,9 @@ export type HomePnl = {
   weekProfitCents: number
   monthProfitCents: number
   yearProfitCents: number
+  weekProceedsCents: number
+  monthProceedsCents: number
+  yearProceedsCents: number
   inventoryCents: number
   slices: TagSlice[]
 }
@@ -2026,10 +2029,15 @@ type FlipProfit = {
   kind: 'sale' | 'write-off'
 }
 
+type WindowProceeds = {
+  date: string
+  cents: number
+}
+
 async function loadStandingFlipProfits(
   db: AppDatabase,
   booksId: string,
-): Promise<{ flips: Flip[]; profits: Map<string, FlipProfit> }> {
+): Promise<{ flips: Flip[]; profits: Map<string, FlipProfit>; proceeds: WindowProceeds[] }> {
   let flipRows = await db.exec(sql`
     select *
     from flip
@@ -2129,7 +2137,12 @@ async function loadStandingFlipProfits(
     hitchByFlipId(db, booksId),
   ])
   let profits = new Map<string, FlipProfit>()
+  let proceeds: WindowProceeds[] = []
   for (let group of groups.values()) {
+    proceeds.push({
+      date: group.saleDate,
+      cents: group.sale.sale_price + group.sale.buyer_paid_shipping,
+    })
     let kit: KitFlip[] = []
     for (let flipId of group.flipIds) {
       let flip = flipsById.get(flipId)
@@ -2156,7 +2169,7 @@ async function loadStandingFlipProfits(
     }
   }
 
-  return { flips: flipsInBooks, profits }
+  return { flips: flipsInBooks, profits, proceeds }
 }
 
 function sumProfitInWindow(
@@ -2169,6 +2182,21 @@ function sumProfitInWindow(
   for (let row of profits) {
     if (dateInWindow(row.date, today, kind, weekStart)) {
       total += row.profitCents
+    }
+  }
+  return total
+}
+
+function sumProceedsInWindow(
+  proceeds: Iterable<WindowProceeds>,
+  today: string,
+  kind: ProfitWindowKind,
+  weekStart: number,
+): number {
+  let total = 0
+  for (let row of proceeds) {
+    if (dateInWindow(row.date, today, kind, weekStart)) {
+      total += row.cents
     }
   }
   return total
@@ -2212,7 +2240,7 @@ export async function loadHomePnl(
   booksId: string,
   input: { today: string; weekStart: number; window: ProfitWindowKind },
 ): Promise<HomePnl> {
-  let { flips: bookFlips, profits } = await loadStandingFlipProfits(db, booksId)
+  let { flips: bookFlips, profits, proceeds } = await loadStandingFlipProfits(db, booksId)
   let inventoryCents = bookFlips.reduce((sum, flip) => {
     return profits.has(flip.id) ? sum : sum + acquisitionCostCents(flip)
   }, 0)
@@ -2264,6 +2292,9 @@ export async function loadHomePnl(
     weekProfitCents: sumProfitInWindow(profitValues, input.today, 'week', input.weekStart),
     monthProfitCents: sumProfitInWindow(profitValues, input.today, 'month', input.weekStart),
     yearProfitCents: sumProfitInWindow(profitValues, input.today, 'year', input.weekStart),
+    weekProceedsCents: sumProceedsInWindow(proceeds, input.today, 'week', input.weekStart),
+    monthProceedsCents: sumProceedsInWindow(proceeds, input.today, 'month', input.weekStart),
+    yearProceedsCents: sumProceedsInWindow(proceeds, input.today, 'year', input.weekStart),
     inventoryCents,
     slices,
   }

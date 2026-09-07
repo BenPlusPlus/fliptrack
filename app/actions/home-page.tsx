@@ -50,18 +50,21 @@ export function HomePage(handle: {
               <ProfitStamp
                 label="This Week"
                 cents={pnl.weekProfitCents}
+                proceedsCents={pnl.weekProceedsCents}
                 href={homeWindowHref("week", today, weekStart)}
                 selected={selected === "week"}
               />
               <ProfitStamp
                 label="This Month"
                 cents={pnl.monthProfitCents}
+                proceedsCents={pnl.monthProceedsCents}
                 href={homeWindowHref("month", today, weekStart)}
                 selected={selected === "month"}
               />
               <ProfitStamp
                 label="This Year"
                 cents={pnl.yearProfitCents}
+                proceedsCents={pnl.yearProceedsCents}
                 href={homeWindowHref("year", today, weekStart)}
                 selected={selected === "year"}
               />
@@ -123,10 +126,16 @@ function homeWindowHref(
 }
 
 function ProfitStamp(handle: {
-  props: { label: string; cents: number; href: string; selected: boolean };
+  props: {
+    label: string;
+    cents: number;
+    proceedsCents: number;
+    href: string;
+    selected: boolean;
+  };
 }) {
   return () => {
-    let { label, cents, href, selected } = handle.props;
+    let { label, cents, proceedsCents, href, selected } = handle.props;
     return (
       <a
         href={href}
@@ -137,6 +146,9 @@ function ProfitStamp(handle: {
           <p mix={stampLabel}>{label}</p>
           <p mix={windowAmount}>
             <Money cents={cents} size="md" />
+          </p>
+          <p mix={proceedsCaption}>
+            on {formatCents(proceedsCents)} proceeds
           </p>
         </Stub>
       </a>
@@ -200,6 +212,15 @@ const inventoryStubBody = css({
 });
 
 const windowAmount = css({ margin: "0.55rem 0 0" });
+
+const proceedsCaption = css({
+  margin: "0.35rem 0 0",
+  fontSize: "0.68rem",
+  fontWeight: 400,
+  lineHeight: 1.3,
+  color: "var(--muted)",
+  overflowWrap: "anywhere",
+});
 
 const sliceGrid = css({
   listStyle: "none",

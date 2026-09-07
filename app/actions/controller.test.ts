@@ -36,6 +36,8 @@ describe('empty Home', () => {
       assert.match(html, /New Acquisition/)
       let zeros = html.match(/\$0/g) ?? []
       assert.ok(zeros.length >= 4)
+      let proceedsCaptions = html.match(/on \$0 proceeds/g) ?? []
+      assert.equal(proceedsCaptions.length, 3)
     } finally {
       await app.db.close()
     }
@@ -126,6 +128,67 @@ describe('Home P&L', () => {
       await app.db.close()
     }
   })
+
+  it('captions each Profit stamp with same-window Proceeds', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      await acquireFlip(app, { name: 'Shirt', itemCost: '10' })
+      await acquireFlip(app, { name: 'Bowl', itemCost: '5' })
+      await acquireFlip(app, { name: 'Lamp', itemCost: '7' })
+
+      let inventoryHtml = await readBody(await fetchPage(app, routes.inventory.href()))
+      let shirtId = flipHrefFromInventory(inventoryHtml, 'Shirt').replace('/flips/', '')
+      let bowlId = flipHrefFromInventory(inventoryHtml, 'Bowl').replace('/flips/', '')
+      let lampId = flipHrefFromInventory(inventoryHtml, 'Lamp').replace('/flips/', '')
+
+      let shirtSale = await postForm(app, `${routes.sales.new.index.href()}?flip=${shirtId}`, {
+        channel: 'eBay',
+        sale_price: '20',
+        buyer_paid_shipping: '5',
+        marketplace_fee: '0',
+        outbound_shipping: '0',
+        supplies: '0',
+        sale_date: '2026-08-24',
+        notes: '',
+      })
+      assert.equal(shirtSale.status, 303)
+
+      let bowlSale = await postForm(app, `${routes.sales.new.index.href()}?flip=${bowlId}`, {
+        channel: 'eBay',
+        sale_price: '8',
+        buyer_paid_shipping: '2',
+        marketplace_fee: '0',
+        outbound_shipping: '0',
+        supplies: '0',
+        sale_date: '2026-08-10',
+        notes: '',
+      })
+      assert.equal(bowlSale.status, 303)
+
+      let lampOff = await postForm(app, `${routes.writeOffs.new.index.href()}?flip=${lampId}`, {
+        outbound_shipping: '0',
+        supplies: '0',
+        write_off_date: '2026-08-24',
+        notes: '',
+      })
+      assert.equal(lampOff.status, 303)
+
+      let html = await readBody(
+        await fetchPage(app, `${routes.home.href()}?window=month&today=2026-08-24&weekStart=1`),
+      )
+      let week = profitStampBlock(html, 'This Week')
+      let month = profitStampBlock(html, 'This Month')
+      let year = profitStampBlock(html, 'This Year')
+      assert.match(week, /on \$25\.00 proceeds/)
+      assert.match(month, /on \$35\.00 proceeds/)
+      assert.match(year, /on \$35\.00 proceeds/)
+      assert.doesNotMatch(week, /on \$35\.00 proceeds/)
+      assert.doesNotMatch(html, /gross sales/i)
+    } finally {
+      await app.db.close()
+    }
+  })
 })
 
 describe('Inventory filters', () => {
@@ -189,6 +252,15 @@ describe('Inventory filters', () => {
     }
   })
 })
+
+function profitStampBlock(html: string, label: string): string {
+  let escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let match = html.match(new RegExp(`${escaped}[\\s\\S]{0,1200}?on \\$[0-9.]+ proceeds`))
+  if (!match) {
+    throw new Error(`Expected a Profit stamp for "${label}" in:\n${html.slice(0, 2500)}`)
+  }
+  return match[0]
+}
 
 function sliceBlock(html: string, name: string): string {
   let escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')

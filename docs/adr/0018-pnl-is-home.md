@@ -15,6 +15,7 @@ After login, home is P&L: Profit for This Week, This Month, and This Year, plus 
 - "Today" is the browser's local date; the week starts on that locale's first day. No Books timezone field.
 - Instance-admin functions are their own Admin view, not a corner of Account.
 - Find-a-Flip is Inventory (name filter, optional Tags-has-all filter), not Home.
+- Each Profit stamp captions same-window Proceeds (`on $X proceeds`). Proceeds is not a second official total; Tag slices do not grow a money-in line.
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision ticket: [What is the screen and information architecture?](https://github.com/BenPlusPlus/fliptrack/issues/19).
