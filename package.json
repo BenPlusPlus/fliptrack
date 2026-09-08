@@ -24,7 +24,7 @@
     "@types/node": "latest",
     "@types/pg": "8.23.1",
     "embedded-postgres": "18.1.0-beta.16",
-    "playwright": "1.62.1",
+    "playwright": "1.63.0",
     "typescript": "latest"
   }
 }
