@@ -78,6 +78,19 @@ export function dateInWindow(
   return saleDate >= from && saleDate <= to
 }
 
+/** Calendar days from an ISO date to today. Same day or a future date is 0. */
+export function calendarDaysHeld(fromIso: string, todayIso: string): number {
+  let from = fromIso.match(ISO_DATE)
+  let to = todayIso.match(ISO_DATE)
+  if (!from || !to) {
+    return 0
+  }
+  let start = Date.UTC(Number(from[1]), Number(from[2]) - 1, Number(from[3]))
+  let end = Date.UTC(Number(to[1]), Number(to[2]) - 1, Number(to[3]))
+  let days = Math.round((end - start) / 86_400_000)
+  return days < 0 ? 0 : days
+}
+
 export function addUtcDays(iso: string, days: number): string {
   let parts = iso.match(ISO_DATE)
   if (!parts) {

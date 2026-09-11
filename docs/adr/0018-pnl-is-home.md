@@ -16,6 +16,7 @@ After login, home is P&L: Profit for This Week, This Month, and This Year, plus 
 - Instance-admin functions are their own Admin view, not a corner of Account.
 - Find-a-Flip is Inventory (name filter, optional Tags-has-all filter), not Home.
 - Each Profit stamp captions same-window Proceeds (`on $X proceeds`). Proceeds is not a second official total; Tag slices do not grow a money-in line.
+- The Inventory stamp and Tag slice cards (including Untagged) link to current Inventory — all, that Tag, or untagged. They do not carry Home's Profit window. Sold, Written-off, and Profit on a slice are not exits.
 
 Glossary: [`CONTEXT.md`](../../CONTEXT.md).
 Decision ticket: [What is the screen and information architecture?](https://github.com/BenPlusPlus/fliptrack/issues/19).

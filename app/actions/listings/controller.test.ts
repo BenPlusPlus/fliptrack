@@ -249,9 +249,9 @@ describe('Listing', () => {
       assert.equal(saved.status, 303)
 
       inventoryHtml = await readBody(await fetchPage(app, routes.inventory.href()))
-      assert.doesNotMatch(inventoryHtml, /Lamp/)
-      assert.match(inventoryHtml, /Cord/)
-      assert.doesNotMatch(inventoryHtml, /Bowl/)
+      assert.doesNotMatch(inventoryHtml, /data-name="Lamp"/)
+      assert.match(inventoryHtml, /data-name="Cord"/)
+      assert.doesNotMatch(inventoryHtml, /data-name="Bowl"/)
 
       listingHtml = await readBody(await fetchPage(app, listingHref))
       assert.match(listingHtml, /Lamp/)

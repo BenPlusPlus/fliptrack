@@ -73,17 +73,19 @@ export function HomePage(handle: {
           <section mix={inventoryPanel}>
             <SectionLabel>Inventory</SectionLabel>
             <div mix={reveal}>
-              <Stub>
-                <div mix={inventoryStubBody}>
-                  <Money
-                    cents={pnl.inventoryCents}
-                    tone="flat"
-                    size="lg"
-                    block
-                  />
-                  <p mix={stampLabel}>Acquisition cost</p>
-                </div>
-              </Stub>
+              <a href={routes.inventory.href()} mix={profitStampLink}>
+                <Stub>
+                  <div mix={inventoryStubBody}>
+                    <Money
+                      cents={pnl.inventoryCents}
+                      tone="flat"
+                      size="lg"
+                      block
+                    />
+                    <p mix={stampLabel}>Acquisition cost</p>
+                  </div>
+                </Stub>
+              </a>
             </div>
           </section>
         </div>
@@ -172,19 +174,29 @@ function SliceCard(handle: { props: { slice: TagSlice } }) {
         : slice.profitCents < 0
           ? sliceProfitLoss
           : undefined;
+    let href =
+      slice.untagged || slice.tagId == null
+        ? `${routes.inventory.href()}?untagged=1`
+        : `${routes.inventory.href()}?tag=${slice.tagId}`;
 
     return (
-      <li mix={sliceCard} data-slice={slice.name}>
-        <p mix={sliceName}>{slice.name}</p>
-        <p mix={profitTone ? [sliceProfit, profitTone] : sliceProfit}>
-          Profit {formatCents(slice.profitCents)}
-        </p>
-        <div mix={sliceStats}>
-          <p mix={sliceStat}>Sold {slice.soldCount}</p>
-          <p mix={sliceStat}>Written-off {slice.writtenOffCount}</p>
-          <p mix={sliceStat}>Inventory {formatCents(slice.inventoryCents)}</p>
-          <p mix={sliceStat}>Unsold {slice.unsoldCount}</p>
-        </div>
+      <li data-slice={slice.name}>
+        <a
+          href={href}
+          mix={sliceCard}
+          aria-label={`${slice.name}, Inventory`}
+        >
+          <p mix={sliceName}>{slice.name}</p>
+          <p mix={profitTone ? [sliceProfit, profitTone] : sliceProfit}>
+            Profit {formatCents(slice.profitCents)}
+          </p>
+          <div mix={sliceStats}>
+            <p mix={sliceStat}>Sold {slice.soldCount}</p>
+            <p mix={sliceStat}>Written-off {slice.writtenOffCount}</p>
+            <p mix={sliceStat}>Inventory {formatCents(slice.inventoryCents)}</p>
+            <p mix={sliceStat}>Unsold {slice.unsoldCount}</p>
+          </div>
+        </a>
       </li>
     );
   };
@@ -235,6 +247,9 @@ const sliceGrid = css({
 });
 
 const sliceCard = css({
+  display: "block",
+  color: "inherit",
+  textDecoration: "none",
   background: "var(--card)",
   border: "1px solid var(--rule)",
   borderRadius: "2px",

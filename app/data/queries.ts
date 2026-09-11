@@ -458,6 +458,219 @@ export async function listWrittenOff(
   return applyFlipFilters(db, booksId, (result.rows ?? []) as Flip[], filter)
 }
 
+export type LiveListingOnRow = {
+  listingId: string
+  kitTitle: string | null
+}
+
+export type DeskPickRow =
+  | {
+      kind: 'inventory'
+      flip: Flip
+      acquisitionDate: string
+      tags: Tag[]
+      liveListings: LiveListingOnRow[]
+    }
+  | {
+      kind: 'sold'
+      flip: Flip
+      tags: Tag[]
+      profitCents: number
+      saleDate: string
+      channelName: string
+    }
+  | {
+      kind: 'written-off'
+      flip: Flip
+      tags: Tag[]
+      profitCents: number
+      writeOffDate: string
+    }
+
+export async function loadDeskPickRows(
+  db: AppDatabase,
+  booksId: string,
+  input: InventoryFilter & { segment: 'inventory' | 'sold' | 'written-off' },
+): Promise<DeskPickRow[]> {
+  let flips =
+    input.segment === 'sold'
+      ? await listSold(db, booksId, input)
+      : input.segment === 'written-off'
+        ? await listWrittenOff(db, booksId, input)
+        : await listInventory(db, booksId, input)
+  if (flips.length === 0) {
+    return []
+  }
+
+  let tagsByFlip = await tagsByFlipId(db, booksId)
+  if (input.segment === 'inventory') {
+    let [dates, listings] = await Promise.all([
+      acquisitionDateByFlipId(db, booksId),
+      liveListingsByFlipId(db, booksId),
+    ])
+    return flips.map((flip) => ({
+      kind: 'inventory' as const,
+      flip,
+      acquisitionDate: dates.get(flip.id) ?? '',
+      tags: tagsByFlip.get(flip.id) ?? [],
+      liveListings: listings.get(flip.id) ?? [],
+    }))
+  }
+
+  let { profits } = await loadStandingFlipProfits(db, booksId)
+  if (input.segment === 'sold') {
+    let facts = await standingSaleFactsByFlipId(db, booksId)
+    return flips.map((flip) => {
+      let fact = facts.get(flip.id)
+      return {
+        kind: 'sold' as const,
+        flip,
+        tags: tagsByFlip.get(flip.id) ?? [],
+        profitCents: profits.get(flip.id)?.profitCents ?? 0,
+        saleDate: fact?.saleDate ?? '',
+        channelName: fact?.channelName ?? '',
+      }
+    })
+  }
+
+  let writeOffDates = await standingWriteOffDateByFlipId(db, booksId)
+  return flips.map((flip) => ({
+    kind: 'written-off' as const,
+    flip,
+    tags: tagsByFlip.get(flip.id) ?? [],
+    profitCents: profits.get(flip.id)?.profitCents ?? 0,
+    writeOffDate: writeOffDates.get(flip.id) ?? '',
+  }))
+}
+
+function isoDate(value: unknown): string {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10)
+  }
+  return String(value).slice(0, 10)
+}
+
+async function tagsByFlipId(db: AppDatabase, booksId: string): Promise<Map<string, Tag[]>> {
+  let result = await db.exec(sql`
+    select tag.id, tag.books_id, tag.name, flip_tag.flip_id
+    from tag
+    join flip_tag on flip_tag.tag_id = tag.id
+    where flip_tag.books_id = ${booksId}
+    order by tag.name asc
+  `)
+  let map = new Map<string, Tag[]>()
+  for (let row of result.rows ?? []) {
+    let flipId = String(row.flip_id)
+    let list = map.get(flipId) ?? []
+    list.push({
+      id: String(row.id),
+      books_id: String(row.books_id),
+      name: String(row.name),
+    })
+    map.set(flipId, list)
+  }
+  return map
+}
+
+async function acquisitionDateByFlipId(
+  db: AppDatabase,
+  booksId: string,
+): Promise<Map<string, string>> {
+  let result = await db.exec(sql`
+    select flip.id, acquisition.acquisition_date
+    from flip
+    join acquisition on acquisition.id = flip.acquisition_id
+    where flip.books_id = ${booksId}
+  `)
+  let map = new Map<string, string>()
+  for (let row of result.rows ?? []) {
+    map.set(String(row.id), isoDate(row.acquisition_date))
+  }
+  return map
+}
+
+async function liveListingsByFlipId(
+  db: AppDatabase,
+  booksId: string,
+): Promise<Map<string, LiveListingOnRow[]>> {
+  let result = await db.exec(sql`
+    select listing.id as listing_id, listing_flip.flip_id, flip.name as flip_name
+    from listing
+    join listing_flip on listing_flip.listing_id = listing.id
+    join flip on flip.id = listing_flip.flip_id
+    where listing.books_id = ${booksId}
+      and listing.ended = false
+    order by listing.id asc, flip.name asc, flip.id asc
+  `)
+
+  type ListingMembers = { listingId: string; flipIds: string[]; names: string[] }
+  let listings = new Map<string, ListingMembers>()
+  for (let row of result.rows ?? []) {
+    let listingId = String(row.listing_id)
+    let group = listings.get(listingId)
+    if (!group) {
+      group = { listingId, flipIds: [], names: [] }
+      listings.set(listingId, group)
+    }
+    group.flipIds.push(String(row.flip_id))
+    group.names.push(String(row.flip_name))
+  }
+
+  let byFlip = new Map<string, LiveListingOnRow[]>()
+  for (let listing of listings.values()) {
+    let onRow: LiveListingOnRow = {
+      listingId: listing.listingId,
+      kitTitle: listing.names.length > 1 ? formatListingTitle(listing.names) : null,
+    }
+    for (let flipId of listing.flipIds) {
+      let chips = byFlip.get(flipId) ?? []
+      chips.push(onRow)
+      byFlip.set(flipId, chips)
+    }
+  }
+  return byFlip
+}
+
+async function standingSaleFactsByFlipId(
+  db: AppDatabase,
+  booksId: string,
+): Promise<Map<string, { saleDate: string; channelName: string }>> {
+  let result = await db.exec(sql`
+    select sale_flip.flip_id, sale.sale_date, channel.name as channel_name
+    from sale_flip
+    join sale on sale.id = sale_flip.sale_id
+    join channel on channel.id = sale.channel_id
+    where sale_flip.books_id = ${booksId}
+      and sale_flip.undone = false
+  `)
+  let map = new Map<string, { saleDate: string; channelName: string }>()
+  for (let row of result.rows ?? []) {
+    map.set(String(row.flip_id), {
+      saleDate: isoDate(row.sale_date),
+      channelName: String(row.channel_name),
+    })
+  }
+  return map
+}
+
+async function standingWriteOffDateByFlipId(
+  db: AppDatabase,
+  booksId: string,
+): Promise<Map<string, string>> {
+  let result = await db.exec(sql`
+    select write_off_flip.flip_id, write_off.write_off_date
+    from write_off_flip
+    join write_off on write_off.id = write_off_flip.write_off_id
+    where write_off_flip.books_id = ${booksId}
+      and write_off_flip.undone = false
+  `)
+  let map = new Map<string, string>()
+  for (let row of result.rows ?? []) {
+    map.set(String(row.flip_id), isoDate(row.write_off_date))
+  }
+  return map
+}
+
 async function applyFlipFilters(
   db: AppDatabase,
   booksId: string,
@@ -2003,6 +2216,7 @@ export async function loadWriteOffHub(
 
 export type TagSlice = {
   name: string
+  tagId: string | null
   untagged: boolean
   profitCents: number
   soldCount: number
@@ -2205,6 +2419,7 @@ function sumProceedsInWindow(
 function sliceForFlips(
   name: string,
   untagged: boolean,
+  tagId: string | null,
   flipsForSlice: Flip[],
   profits: Map<string, FlipProfit>,
   today: string,
@@ -2232,7 +2447,16 @@ function sliceForFlips(
       unsoldCount += 1
     }
   }
-  return { name, untagged, profitCents, soldCount, writtenOffCount, inventoryCents, unsoldCount }
+  return {
+    name,
+    tagId,
+    untagged,
+    profitCents,
+    soldCount,
+    writtenOffCount,
+    inventoryCents,
+    unsoldCount,
+  }
 }
 
 export async function loadHomePnl(
@@ -2266,6 +2490,7 @@ export async function loadHomePnl(
     sliceForFlips(
       tag.name,
       false,
+      tag.id,
       bookFlips.filter((flip) => tagIdsByFlip.get(flip.id)?.has(tag.id)),
       profits,
       input.today,
@@ -2279,6 +2504,7 @@ export async function loadHomePnl(
       sliceForFlips(
         'Untagged',
         true,
+        null,
         untaggedFlips,
         profits,
         input.today,
