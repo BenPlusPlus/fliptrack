@@ -11,10 +11,8 @@ import { assetServer } from '../assets.ts'
 import {
   findOperatorById,
   listChannelsInBooks,
-  listInventory,
-  listSold,
   listTagsInBooks,
-  listWrittenOff,
+  loadDeskPickRows,
   loadHomePnl,
   replaceOperatorPassword,
 } from '../data/queries.ts'
@@ -83,6 +81,7 @@ export default createController(routes, {
         let name = context.url.searchParams.get('q') ?? ''
         let untagged = context.url.searchParams.get('untagged') === '1'
         let tagIds = untagged ? [] : context.url.searchParams.getAll('tag')
+        let today = parseTodayParam(context.url.searchParams.get('today')) ?? localToday()
         let segmentParam = context.url.searchParams.get('segment')
         let segment: 'inventory' | 'sold' | 'written-off' =
           segmentParam === 'sold'
@@ -90,22 +89,19 @@ export default createController(routes, {
             : segmentParam === 'written-off'
               ? 'written-off'
               : 'inventory'
-        let [flips, bookTags] = await Promise.all([
-          segment === 'sold'
-            ? listSold(db, identity.booksId, { name, tagIds, untagged })
-            : segment === 'written-off'
-              ? listWrittenOff(db, identity.booksId, { name, tagIds, untagged })
-              : listInventory(db, identity.booksId, { name, tagIds, untagged }),
+        let [rows, bookTags] = await Promise.all([
+          loadDeskPickRows(db, identity.booksId, { name, tagIds, untagged, segment }),
           listTagsInBooks(db, identity.booksId),
         ])
         return context.render(
           <InventoryPage
             identity={identity}
             csrf={getCsrfToken(context)}
-            flips={flips}
+            rows={rows}
             bookTags={bookTags}
             filter={{ name, tagIds, untagged }}
             segment={segment}
+            today={today}
           />,
         )
       },
