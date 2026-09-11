@@ -2,7 +2,7 @@
   "name": "fliptrack",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.3.4",
+  "packageManager": "pnpm@12.4.0",
   "scripts": {
     "dev": "node --watch --import remix/node-tsx server.ts",
     "hmr": "node hmr.ts",
