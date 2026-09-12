@@ -8,7 +8,7 @@ const LEAVE_HREF = '/acquisitions/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
 const ACTION = `${LEAVE_HREF}/flips/new`
 
 describe('Add a Flip in-place save', () => {
-  it('prepends the typed Flip, clears the form, and focuses Flip name without a second fetch', async (t) => {
+  it('prepends the typed Flip, keeps the Tag, and focuses Flip name without a second fetch', async (t) => {
     let gate = holdFetch(t)
     let { $, act, cleanup } = renderForm()
     t.after(cleanup)
@@ -29,12 +29,52 @@ describe('Add a Flip in-place save', () => {
     assert.equal(gate.calls, 1)
     assert.match($('ol')?.textContent ?? '', /Oak dresser/)
     assert.match($('ol')?.textContent ?? '', /\$40\.00/)
+    assert.doesNotMatch($('ol')?.textContent ?? '', /Vintage/)
     assert.equal(field($('input[name="name"]')).value, '')
     assert.equal(field($('input[name="item_cost"]')).value, '')
     assert.equal(field($('textarea[name="notes"]')).value, '')
-    assert.equal(field($('input[name="tag"]')).value, '')
+    assert.equal(field($('input[name="tag"]')).value, 'Vintage')
     assert.equal(document.activeElement, $('input[name="name"]'))
     assert.equal($('button[type="submit"]')?.textContent, 'Save Flip')
+  })
+
+  it('keeps the Tag on a later 204 when the strip is already showing', async (t) => {
+    let gate = holdFetch(t)
+    let { $, act, cleanup } = renderForm({
+      sittingFlips: [{ id: '1', name: 'Lamp', itemCost: 1000 }],
+      lastTag: 'Goodwill',
+    })
+    t.after(cleanup)
+
+    assert.equal(field($('input[name="tag"]')).value, 'Goodwill')
+    fill($('input[name="name"]'), 'Vase')
+    fill($('input[name="item_cost"]'), '8')
+
+    await act(() => clickSave($))
+    gate.resolve(new Response(null, { status: 204 }))
+    await settle(act, gate.pending)
+
+    assert.equal(field($('input[name="tag"]')).value, 'Goodwill')
+    assert.equal(field($('input[name="name"]')).value, '')
+    assert.match($('ol')?.textContent ?? '', /Vase/)
+  })
+
+  it('leaves the Tag field empty after a 204 with no Tag', async (t) => {
+    let gate = holdFetch(t)
+    let { $, act, cleanup } = renderForm({ lastTag: 'Vintage' })
+    t.after(cleanup)
+
+    assert.equal(field($('input[name="tag"]')).value, 'Vintage')
+    fill($('input[name="name"]'), 'Bowl')
+    fill($('input[name="item_cost"]'), '6')
+    fill($('input[name="tag"]'), '')
+
+    await act(() => clickSave($))
+    gate.resolve(new Response(null, { status: 204 }))
+    await settle(act, gate.pending)
+
+    assert.equal(field($('input[name="tag"]')).value, '')
+    assert.equal(field($('input[name="name"]')).value, '')
   })
 
   it('locks fields and Save while the POST is in flight, and Leave stays clickable', async (t) => {
@@ -157,6 +197,7 @@ describe('Add a Flip in-place save', () => {
 
     fill($('input[name="name"]'), 'Solo mug')
     fill($('input[name="item_cost"]'), '5')
+    fill($('input[name="tag"]'), 'Goodwill')
     await act(() => clickSave($))
     gate.resolve(new Response(null, { status: 204 }))
     await settle(act, gate.pending)
@@ -164,6 +205,7 @@ describe('Add a Flip in-place save', () => {
     assert.equal($('ol'), null)
     assert.doesNotMatch($('section')?.textContent ?? '', /This sitting/)
     assert.equal(field($('input[name="name"]')).value, '')
+    assert.equal(field($('input[name="tag"]')).value, '')
     assert.equal(document.activeElement, $('input[name="name"]'))
   })
 

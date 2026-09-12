@@ -141,6 +141,7 @@ describe('Add a Flip', () => {
       form.set('name', 'Fetch mug')
       form.set('item_cost', '7')
       form.set('notes', '')
+      form.set('tag', 'Goodwill')
       let saved = await fetchPage(app, started.addHref, {
         method: 'POST',
         body: form,
@@ -152,6 +153,7 @@ describe('Add a Flip', () => {
       let after = await readBody(await fetchPage(app, started.addHref))
       assert.match(after, /This sitting/)
       assert.match(after, /Fetch mug/)
+      assert.equal(tagInputValue(after), 'Goodwill')
     } finally {
       await app.db.close()
     }
@@ -295,6 +297,176 @@ describe('Add a Flip', () => {
     }
   })
 
+  it('keeps the Tag field after Save and attaches it to the next Flip without retyping', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      await postForm(app, started.addHref, {
+        name: 'Lamp',
+        item_cost: '10',
+        notes: '',
+        tag: 'Goodwill',
+      })
+
+      let html = await readBody(await fetchPage(app, started.addHref))
+      assert.equal(tagInputValue(html), 'Goodwill')
+      let strip = html.match(/<ol[^>]*>[\s\S]*?<\/ol>/)
+      assert.ok(strip)
+      assert.match(strip[0]!, /Lamp/)
+      assert.match(strip[0]!, /\$10\.00/)
+      assert.doesNotMatch(strip[0]!, /Goodwill/)
+
+      await postForm(app, started.addHref, {
+        name: 'Vase',
+        item_cost: '8',
+        notes: '',
+        tag: tagInputValue(html),
+      })
+
+      let inventory = await readBody(await fetchPage(app, routes.inventory.href()))
+      let lampHtml = await readBody(
+        await fetchPage(app, flipHrefFromInventory(inventory, 'Lamp')),
+      )
+      assert.match(lampHtml, />Goodwill</)
+      let vaseHtml = await readBody(
+        await fetchPage(app, flipHrefFromInventory(inventory, 'Vase')),
+      )
+      assert.match(vaseHtml, />Goodwill</)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('empties the Tag field after Save Flip with no Tag, including after refresh', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      await postForm(app, started.addHref, {
+        name: 'Lamp',
+        item_cost: '10',
+        notes: '',
+        tag: 'Goodwill',
+      })
+      await postForm(app, started.addHref, {
+        name: 'Bowl',
+        item_cost: '6',
+        notes: '',
+        tag: '',
+      })
+
+      let html = await readBody(await fetchPage(app, started.addHref))
+      assert.equal(tagInputValue(html), '')
+
+      let inventory = await readBody(await fetchPage(app, routes.inventory.href()))
+      let bowlHtml = await readBody(
+        await fetchPage(app, flipHrefFromInventory(inventory, 'Bowl')),
+      )
+      assert.match(bowlHtml, /No Tags yet/)
+      assert.doesNotMatch(bowlHtml, />Goodwill</)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('does not prefill Tag when this session has no sitting', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      app.jar.clear()
+      await login(app)
+
+      let empty = await readBody(await fetchPage(app, started.addHref))
+      assert.equal(tagInputValue(empty), '')
+
+      await postForm(app, started.addHref, {
+        name: 'Solo mug',
+        item_cost: '5',
+        notes: '',
+        tag: 'Goodwill',
+      })
+
+      let after = await readBody(await fetchPage(app, started.addHref))
+      assert.equal(tagInputValue(after), '')
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('does not prefill Tag after logout', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      await postForm(app, started.addHref, {
+        name: 'Lamp',
+        item_cost: '10',
+        notes: '',
+        tag: 'Goodwill',
+      })
+
+      let account = await readBody(await fetchPage(app, routes.account.href()))
+      let form = new FormData()
+      form.set('_csrf', csrfToken(account))
+      await fetchPage(app, routes.logout.href(), { method: 'POST', body: form })
+      await login(app)
+
+      let after = await readBody(await fetchPage(app, started.addHref))
+      assert.equal(tagInputValue(after), '')
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('does not keep the previous sitting’s Tag after Continue', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let first = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: 'Saturday haul',
+      })
+      await postForm(app, first.addHref, {
+        name: 'Lamp',
+        item_cost: '10',
+        notes: '',
+        tag: 'Goodwill',
+      })
+
+      let continued = await postForm(
+        app,
+        routes.acquisitions.continue.index.href({ acquisitionId: first.acquisitionId }),
+        {
+          acquisition_date: '2026-08-22',
+          notes: 'Saturday haul',
+          tax_paid: '0',
+          inbound_shipping: '0',
+        },
+      )
+      assert.equal(continued.status, 303)
+      assert.equal(continued.headers.get('Location'), first.addHref)
+
+      let html = await readBody(await fetchPage(app, first.addHref))
+      assert.equal(tagInputValue(html), '')
+    } finally {
+      await app.db.close()
+    }
+  })
+
   it('caps the strip at 3 rows below 64rem and 5 from 64rem without a sitting total', async () => {
     let app = await createTestApp()
     try {
@@ -328,6 +500,14 @@ describe('Add a Flip', () => {
 function hrefAttr(href: string): RegExp {
   let escaped = href.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   return new RegExp(`href="${escaped}"`)
+}
+
+function tagInputValue(html: string): string {
+  let input = html.match(/<input[^>]*name="tag"[^>]*>/)
+  if (!input) {
+    throw new Error('Expected a Tag field')
+  }
+  return input[0].match(/value="([^"]*)"/)?.[1] ?? ''
 }
 
 async function startAddFlip(
