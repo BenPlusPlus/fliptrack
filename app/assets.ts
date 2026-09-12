@@ -24,12 +24,15 @@ export const assetServer = createAssetServer({
   minify: !isDevelopment,
   watch: isDevelopment,
   hmr: isHmr
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    ? {
+        channel: async () =>
+          (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        moduleImporter: 'remix/multiple-import-maps-polyfill',
+      }
     : undefined,
   scripts: { loaders: isHmr ? [uiHmr()] : undefined },
 })
 
 const entry = 'app/actions/public/entry.ts'
 
-export const entryHref = await assetServer.getHref(entry)
-export const entryPreloads = await assetServer.getPreloads(entry)
+export const scriptEntry = await assetServer.getScriptEntry(entry)

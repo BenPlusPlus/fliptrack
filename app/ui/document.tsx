@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
+import { ImportMap } from 'remix/ui/server'
 
-import { entryHref, entryPreloads } from '../assets.ts'
+import { scriptEntry } from '../assets.ts'
 import { FONT_BODY, GOOGLE_FONTS_HREF, THEME_COLOR, globalCss, tokens } from './styles.ts'
 
 export interface DocumentProps {
@@ -12,6 +13,7 @@ export interface DocumentProps {
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = 'Fliptrack' } = handle.props
+    let { href, importMap, preloads } = scriptEntry
 
     return (
       <html lang="en">
@@ -27,10 +29,11 @@ export function Document(handle: Handle<DocumentProps>) {
           <style>{globalCss}</style>
           <title>{title}</title>
           {head}
-          {entryPreloads.map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
+          <ImportMap value={importMap} />
+          {preloads.map((preloadHref) => (
+            <link key={preloadHref} rel="modulepreload" href={preloadHref} />
           ))}
-          <script type="module" src={entryHref}></script>
+          <script type="module" src={href}></script>
         </head>
         <body
           mix={tokens}
