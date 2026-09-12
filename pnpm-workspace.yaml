@@ -8,3 +8,6 @@ allowBuilds:
   '@embedded-postgres/linux-x64': true
   '@embedded-postgres/windows-x64': true
   esbuild: true
+  # pnpm 12 replaces a shebang-less placeholder with pnpm.exe. If this
+  # install is skipped, Windows cmd shims cannot launch `pnpm` at all.
+  pnpm: true
