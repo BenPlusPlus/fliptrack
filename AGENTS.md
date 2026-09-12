@@ -1,3 +1,8 @@
+## Special Instructions
+
+### When committing
+- If you are going to commit changes, never do so on the default (main or master) branch; if the default branch is the current branch, make a new one named in a way relevant to your work.
+
 ## Agent skills
 
 ### Issue tracker

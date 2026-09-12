@@ -2,7 +2,7 @@ FROM node:24.20.0-bookworm-slim@sha256:ba849c60be29959425b8734d57b8b4b7d56f98edd
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.4.0 --activate
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
