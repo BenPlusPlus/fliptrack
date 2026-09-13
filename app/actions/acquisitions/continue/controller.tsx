@@ -97,6 +97,7 @@ export default createController(routes.acquisitions.continue, {
         taxPaid: tax.cents,
         inboundShipping: inbound.cents,
         flipIds: [],
+        lastTags: [],
       }
       mustGet(context.get(Session), 'session').set(SITTING_KEY, sitting)
 

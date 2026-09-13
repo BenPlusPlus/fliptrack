@@ -31,6 +31,7 @@ export type AddFlipFormProps = {
   sittingTotal?: number
   trackSitting?: boolean
   revealSitting?: boolean
+  lastTag?: string
   error?: string
   values?: { name: string; notes: string; itemCost: string; tag?: string }
 }
@@ -51,6 +52,7 @@ export const AddFlipForm = clientEntry(
       deal: false,
     }))
     let nameInput: HTMLInputElement | undefined
+    let stickyTag = handle.props.lastTag ?? ''
 
     async function onSubmit(
       event: SubmitEvent & { currentTarget: HTMLFormElement },
@@ -88,6 +90,7 @@ export const AddFlipForm = clientEntry(
       if (signal.aborted) return
 
       if (response.status === 204) {
+        stickyTag = trackSitting ? String(formData.get('tag') ?? '').trim() : ''
         if (trackSitting) {
           let parsed = parseCents(typedCost)
           for (let flip of sittingFlips) flip.deal = false
@@ -105,7 +108,7 @@ export const AddFlipForm = clientEntry(
         }
         saving = false
         error = undefined
-        clearFlipFields(form)
+        clearFlipFields(form, trackSitting)
         await handle.update()
         nameInput?.focus()
         return
@@ -180,7 +183,7 @@ export const AddFlipForm = clientEntry(
                     name="tag"
                     list="tag-names"
                     autoComplete="off"
-                    defaultValue={values?.tag ?? ''}
+                    defaultValue={values?.tag ?? stickyTag}
                     readOnly={saving}
                   />
                 </label>
@@ -270,10 +273,11 @@ async function errorFromHtml(response: Response): Promise<string | null> {
   return text ? text : null
 }
 
-function clearFlipFields(form: HTMLFormElement) {
+function clearFlipFields(form: HTMLFormElement, keepTag: boolean) {
   for (let element of form.elements) {
     if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) continue
     if (element.type === 'hidden') continue
+    if (keepTag && element.name === 'tag') continue
     element.value = ''
   }
 }

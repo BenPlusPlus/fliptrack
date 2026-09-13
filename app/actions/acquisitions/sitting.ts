@@ -5,6 +5,7 @@ export type Sitting = {
   taxPaid: number
   inboundShipping: number
   flipIds: string[]
+  lastTags: string[]
 }
 
 export function sittingFor(value: unknown, acquisitionId: string): Sitting | null {
@@ -20,6 +21,7 @@ export function sittingFor(value: unknown, acquisitionId: string): Sitting | nul
       taxPaid: sitting.taxPaid,
       inboundShipping: sitting.inboundShipping,
       flipIds: Array.isArray(sitting.flipIds) ? sitting.flipIds : [],
+      lastTags: Array.isArray(sitting.lastTags) ? sitting.lastTags : [],
     }
   }
   return null

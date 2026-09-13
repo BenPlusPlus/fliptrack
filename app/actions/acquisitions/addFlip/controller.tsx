@@ -54,6 +54,7 @@ export default createController(routes.acquisitions.addFlip, {
           sittingFlips={sittingFlips}
           trackSitting={sitting != null}
           revealSitting
+          lastTag={sitting?.lastTags[0]}
         />,
       )
     },
@@ -124,6 +125,7 @@ export default createController(routes.acquisitions.addFlip, {
         session.set(SITTING_KEY, {
           ...sitting,
           flipIds: [...sitting.flipIds, created.id],
+          lastTags: tagName === '' ? [] : [tagName],
         })
       }
 
@@ -179,13 +181,24 @@ function AddFlipPage(handle: {
     sittingFlips: SittingFlip[]
     trackSitting?: boolean
     revealSitting?: boolean
+    lastTag?: string
     error?: string
     values?: { name: string; notes: string; itemCost: string; tag?: string }
   }
 }) {
   return () => {
-    let { identity, csrf, acquisition, bookTags, sittingFlips, trackSitting, revealSitting, error, values } =
-      handle.props
+    let {
+      identity,
+      csrf,
+      acquisition,
+      bookTags,
+      sittingFlips,
+      trackSitting,
+      revealSitting,
+      lastTag,
+      error,
+      values,
+    } = handle.props
     let notes =
       typeof acquisition.notes === 'string' && acquisition.notes !== '' ? acquisition.notes : null
 
@@ -209,6 +222,7 @@ function AddFlipPage(handle: {
           sittingTotal={sittingFlips.length}
           trackSitting={trackSitting === true}
           revealSitting={revealSitting === true}
+          lastTag={lastTag}
           error={error}
           values={values}
         />

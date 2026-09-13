@@ -32,6 +32,7 @@ import { routes } from '../routes.ts'
 import { mustGet } from '../utils/context.ts'
 import { hashPassword, verifyPassword } from '../utils/password.ts'
 import { AccountPage } from './account-page.tsx'
+import { SITTING_KEY } from './acquisitions/sitting.ts'
 import { HomePage } from './home-page.tsx'
 import { InventoryPage } from './inventory-page.tsx'
 
@@ -182,6 +183,7 @@ export default createController(routes, {
     logout(context) {
       let session = context.get(Session)
       session.unset('auth')
+      session.unset(SITTING_KEY)
       session.regenerateId(true)
       return redirect(routes.login.index.href(), 303)
     },
