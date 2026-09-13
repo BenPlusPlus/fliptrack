@@ -28,10 +28,11 @@ export const routes = route({
     addFlip: form('/acquisitions/:acquisitionId/flips/new'),
     continue: form('/acquisitions/:acquisitionId/continue'),
   },
-  tags: route('/tags/:tagId', {
-    rename: post('/'),
-    delete: form('delete'),
-  }),
+  tags: {
+    apply: form('/tags/apply'),
+    rename: post('/tags/:tagId'),
+    delete: form('/tags/:tagId/delete'),
+  },
   channels: route('/channels/:channelId', {
     rename: post('/'),
     delete: form('delete'),
