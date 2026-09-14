@@ -20,6 +20,7 @@ import { AppShell } from '../../../ui/shell.tsx'
 import { mustGet } from '../../../utils/context.ts'
 import { parseCents } from '../../../utils/cents.ts'
 import { SITTING_KEY, sittingFor, type Sitting } from '../sitting.ts'
+import { uniqueTagNames } from './public/tag-names.ts'
 import { AddFlipForm, SITTING_DESK_CAP, type SittingFlip } from './public/add-flip-form.tsx'
 
 export default createController(routes.acquisitions.addFlip, {
@@ -54,7 +55,7 @@ export default createController(routes.acquisitions.addFlip, {
           sittingFlips={sittingFlips}
           trackSitting={sitting != null}
           revealSitting
-          lastTag={sitting?.lastTags[0]}
+          lastTags={sitting?.lastTags ?? []}
         />,
       )
     },
@@ -74,7 +75,7 @@ export default createController(routes.acquisitions.addFlip, {
       let csrf = getCsrfToken(context)
       let name = String(formData.get('name') ?? '').trim()
       let notesRaw = String(formData.get('notes') ?? '').trim()
-      let tagName = String(formData.get('tag') ?? '').trim()
+      let submittedTags = uniqueTagNames(formData.getAll('tag'))
       let itemCost = parseCents(String(formData.get('item_cost') ?? ''), { required: true })
       let bookTags = await listTagsInBooks(db, identity.booksId)
       let session = mustGet(context.get(Session), 'session')
@@ -105,7 +106,7 @@ export default createController(routes.acquisitions.addFlip, {
               name: String(formData.get('name') ?? ''),
               notes: notesRaw,
               itemCost: String(formData.get('item_cost') ?? ''),
-              tag: tagName,
+              tag: submittedTags[0] ?? '',
             }}
           />,
           { status: 400 },
@@ -125,11 +126,11 @@ export default createController(routes.acquisitions.addFlip, {
         session.set(SITTING_KEY, {
           ...sitting,
           flipIds: [...sitting.flipIds, created.id],
-          lastTags: tagName === '' ? [] : [tagName],
+          lastTags: submittedTags,
         })
       }
 
-      if (tagName !== '') {
+      for (let tagName of submittedTags) {
         await attachNamedTagToFlip(db, {
           flipId: created.id,
           booksId: identity.booksId,
@@ -181,7 +182,7 @@ function AddFlipPage(handle: {
     sittingFlips: SittingFlip[]
     trackSitting?: boolean
     revealSitting?: boolean
-    lastTag?: string
+    lastTags?: string[]
     error?: string
     values?: { name: string; notes: string; itemCost: string; tag?: string }
   }
@@ -195,7 +196,7 @@ function AddFlipPage(handle: {
       sittingFlips,
       trackSitting,
       revealSitting,
-      lastTag,
+      lastTags,
       error,
       values,
     } = handle.props
@@ -222,7 +223,7 @@ function AddFlipPage(handle: {
           sittingTotal={sittingFlips.length}
           trackSitting={trackSitting === true}
           revealSitting={revealSitting === true}
-          lastTag={lastTag}
+          lastTags={lastTags}
           error={error}
           values={values}
         />
