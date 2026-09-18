@@ -8,10 +8,13 @@ import {
   fieldWide,
   ghostAction,
   labelStyle,
+  priceTag,
   primaryAction,
   revealStagger,
+  tagRail,
 } from '../../../../ui/styles.ts'
 import { parseCents } from '../../../../utils/cents.ts'
+import { uniqueTagNames } from './tag-names.ts'
 
 export const SITTING_PHONE_CAP = 3
 export const SITTING_DESK_CAP = 5
@@ -31,7 +34,7 @@ export type AddFlipFormProps = {
   sittingTotal?: number
   trackSitting?: boolean
   revealSitting?: boolean
-  lastTag?: string
+  lastTags?: string[]
   error?: string
   values?: { name: string; notes: string; itemCost: string; tag?: string }
 }
@@ -52,7 +55,24 @@ export const AddFlipForm = clientEntry(
       deal: false,
     }))
     let nameInput: HTMLInputElement | undefined
-    let stickyTag = handle.props.lastTag ?? ''
+    let tagInput: HTMLInputElement | undefined
+    let chips: string[] = []
+    let chipAdder = false
+
+    function addChip(from: HTMLInputElement | undefined) {
+      if (!from || saving || handle.props.inspecting) return
+      let next = uniqueTagNames([...chips, from.value])
+      from.value = ''
+      if (next.length === chips.length) return
+      chips = next
+      handle.update()
+    }
+
+    function removeChip(name: string) {
+      if (saving || handle.props.inspecting) return
+      chips = chips.filter((chip) => chip.toLowerCase() !== name.toLowerCase())
+      handle.update()
+    }
 
     async function onSubmit(
       event: SubmitEvent & { currentTarget: HTMLFormElement },
@@ -65,6 +85,11 @@ export const AddFlipForm = clientEntry(
       let formData = new FormData(form)
       let typedName = String(formData.get('name') ?? '').trim()
       let typedCost = String(formData.get('item_cost') ?? '')
+      let submittedTags = uniqueTagNames([...chips, formData.get('tag')])
+      formData.delete('tag')
+      for (let tagName of submittedTags) {
+        formData.append('tag', tagName)
+      }
 
       saving = true
       error = undefined
@@ -90,7 +115,7 @@ export const AddFlipForm = clientEntry(
       if (signal.aborted) return
 
       if (response.status === 204) {
-        stickyTag = trackSitting ? String(formData.get('tag') ?? '').trim() : ''
+        chips = trackSitting ? submittedTags : []
         if (trackSitting) {
           let parsed = parseCents(typedCost)
           for (let flip of sittingFlips) flip.deal = false
@@ -108,7 +133,7 @@ export const AddFlipForm = clientEntry(
         }
         saving = false
         error = undefined
-        clearFlipFields(form, trackSitting)
+        clearFlipFields(form)
         await handle.update()
         nameInput?.focus()
         return
@@ -176,17 +201,68 @@ export const AddFlipForm = clientEntry(
                   defaultValue={values?.itemCost}
                   readOnly={saving}
                 />
-                <label mix={labelStyle}>
+                <div mix={labelStyle}>
                   Tag
-                  <input
-                    type="text"
-                    name="tag"
-                    list="tag-names"
-                    autoComplete="off"
-                    defaultValue={values?.tag ?? stickyTag}
-                    readOnly={saving}
-                  />
-                </label>
+                  {chipAdder && chips.length > 0 ? (
+                    <ul mix={tagRail}>
+                      {chips.map((name) => (
+                        <li key={name} mix={priceTag}>
+                          {name}
+                          {inspecting ? null : (
+                            <button
+                              type="button"
+                              aria-label={`Remove ${name}`}
+                              disabled={saving}
+                              mix={on('click', () => removeChip(name))}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <div mix={tagAddRow}>
+                    <input
+                      type="text"
+                      name="tag"
+                      list="tag-names"
+                      autoComplete="off"
+                      aria-label="Tag"
+                      defaultValue={
+                        values?.tag ?? (chipAdder ? '' : (handle.props.lastTags?.[0] ?? ''))
+                      }
+                      readOnly={saving}
+                      mix={[
+                        ref((node) => {
+                          if (!(node instanceof HTMLInputElement)) return
+                          tagInput = node
+                          if (chipAdder) return
+                          chipAdder = true
+                          chips = uniqueTagNames(handle.props.lastTags ?? [])
+                          if (chips.length > 0 && handle.props.values?.tag == null) {
+                            node.value = ''
+                          }
+                          handle.update()
+                        }),
+                        on('keydown', (event) => {
+                          if (event.key !== 'Enter' || event.isComposing) return
+                          event.preventDefault()
+                          addChip(event.currentTarget)
+                        }),
+                      ]}
+                    />
+                    {chipAdder && !inspecting ? (
+                      <button
+                        type="button"
+                        disabled={saving}
+                        mix={[ghostAction, tagAddButton, on('click', () => addChip(tagInput))]}
+                      >
+                        Add
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
                 <label mix={[labelStyle, fieldWide]}>
                   Flip notes
                   <textarea
@@ -273,14 +349,26 @@ async function errorFromHtml(response: Response): Promise<string | null> {
   return text ? text : null
 }
 
-function clearFlipFields(form: HTMLFormElement, keepTag: boolean) {
+function clearFlipFields(form: HTMLFormElement) {
   for (let element of form.elements) {
     if (!(element instanceof HTMLInputElement) && !(element instanceof HTMLTextAreaElement)) continue
     if (element.type === 'hidden') continue
-    if (keepTag && element.name === 'tag') continue
     element.value = ''
   }
 }
+
+const tagAddRow = css({
+  display: 'grid',
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  gap: '0.45rem',
+  alignItems: 'stretch',
+  minWidth: 0,
+})
+
+const tagAddButton = css({
+  paddingLeft: '0.9rem',
+  paddingRight: '0.9rem',
+})
 
 const saveBusy = css({
   transform: 'translateY(2px)',

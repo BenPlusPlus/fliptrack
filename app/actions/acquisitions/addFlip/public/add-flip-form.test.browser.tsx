@@ -22,6 +22,7 @@ describe('Add a Flip in-place save', () => {
     assert.equal(gate.calls, 1)
     assert.equal(gate.init?.method, 'POST')
     assert.equal(gate.init?.redirect, 'manual')
+    assert.deepEqual(postedTags(gate.init), ['Vintage'])
 
     gate.resolve(new Response(null, { status: 204 }))
     await settle(act, gate.pending)
@@ -33,48 +34,106 @@ describe('Add a Flip in-place save', () => {
     assert.equal(field($('input[name="name"]')).value, '')
     assert.equal(field($('input[name="item_cost"]')).value, '')
     assert.equal(field($('textarea[name="notes"]')).value, '')
-    assert.equal(field($('input[name="tag"]')).value, 'Vintage')
+    assert.equal(field($('input[name="tag"]')).value, '')
+    assert.deepEqual(chipNames(), ['Vintage'])
     assert.equal(document.activeElement, $('input[name="name"]'))
     assert.equal($('button[type="submit"]')?.textContent, 'Save Flip')
   })
 
-  it('keeps the Tag on a later 204 when the strip is already showing', async (t) => {
+  it('keeps the Tag set on a later 204 when the strip is already showing', async (t) => {
     let gate = holdFetch(t)
     let { $, act, cleanup } = renderForm({
       sittingFlips: [{ id: '1', name: 'Lamp', itemCost: 1000 }],
-      lastTag: 'Goodwill',
+      lastTags: ['Goodwill'],
     })
     t.after(cleanup)
 
-    assert.equal(field($('input[name="tag"]')).value, 'Goodwill')
+    assert.deepEqual(chipNames(), ['Goodwill'])
+    assert.equal(field($('input[name="tag"]')).value, '')
     fill($('input[name="name"]'), 'Vase')
     fill($('input[name="item_cost"]'), '8')
 
     await act(() => clickSave($))
+    assert.deepEqual(postedTags(gate.init), ['Goodwill'])
     gate.resolve(new Response(null, { status: 204 }))
     await settle(act, gate.pending)
 
-    assert.equal(field($('input[name="tag"]')).value, 'Goodwill')
+    assert.deepEqual(chipNames(), ['Goodwill'])
+    assert.equal(field($('input[name="tag"]')).value, '')
     assert.equal(field($('input[name="name"]')).value, '')
     assert.match($('ol')?.textContent ?? '', /Vase/)
   })
 
-  it('leaves the Tag field empty after a 204 with no Tag', async (t) => {
+  it('leaves the Tag control empty after a 204 with no Tags', async (t) => {
     let gate = holdFetch(t)
-    let { $, act, cleanup } = renderForm({ lastTag: 'Vintage' })
+    let { $, act, cleanup } = renderForm({ lastTags: ['Vintage'] })
     t.after(cleanup)
 
-    assert.equal(field($('input[name="tag"]')).value, 'Vintage')
+    assert.deepEqual(chipNames(), ['Vintage'])
     fill($('input[name="name"]'), 'Bowl')
     fill($('input[name="item_cost"]'), '6')
-    fill($('input[name="tag"]'), '')
+    await act(() => $('button[aria-label="Remove Vintage"]')?.click())
+    assert.deepEqual(chipNames(), [])
 
     await act(() => clickSave($))
+    assert.deepEqual(postedTags(gate.init), [])
     gate.resolve(new Response(null, { status: 204 }))
     await settle(act, gate.pending)
 
+    assert.deepEqual(chipNames(), [])
     assert.equal(field($('input[name="tag"]')).value, '')
     assert.equal(field($('input[name="name"]')).value, '')
+  })
+
+  it('adds a chip on Enter without Saving, and Save Flip sends chips plus the open field', async (t) => {
+    let gate = holdFetch(t)
+    let { $, act, cleanup } = renderForm()
+    t.after(cleanup)
+
+    fill($('input[name="name"]'), 'Lamp')
+    fill($('input[name="item_cost"]'), '10')
+    fill($('input[name="tag"]'), 'Goodwill')
+    await act(() => pressEnter($('input[name="tag"]')))
+
+    assert.deepEqual(chipNames(), ['Goodwill'])
+    assert.equal(field($('input[name="tag"]')).value, '')
+    assert.equal(gate.calls, 0)
+
+    fill($('input[name="tag"]'), 'Vintage')
+    await act(() => clickSave($))
+    assert.equal(gate.calls, 1)
+    assert.deepEqual(postedTags(gate.init), ['Goodwill', 'Vintage'])
+
+    gate.resolve(new Response(null, { status: 204 }))
+    await settle(act, gate.pending)
+    assert.deepEqual(chipNames(), ['Goodwill', 'Vintage'])
+    assert.equal(field($('input[name="tag"]')).value, '')
+  })
+
+  it('ignores duplicate and empty Add, and × drops a chip from this form only', async (t) => {
+    let gate = holdFetch(t)
+    let { $, act, cleanup } = renderForm({ lastTags: ['Goodwill'] })
+    t.after(cleanup)
+
+    fill($('input[name="tag"]'), 'goodwill')
+    await act(() => pressEnter($('input[name="tag"]')))
+    assert.deepEqual(chipNames(), ['Goodwill'])
+    assert.equal(field($('input[name="tag"]')).value, '')
+
+    await act(() => addButton().click())
+    assert.deepEqual(chipNames(), ['Goodwill'])
+    assert.equal(gate.calls, 0)
+
+    fill($('input[name="tag"]'), 'Vintage')
+    await act(() => addButton().click())
+    assert.deepEqual(chipNames(), ['Goodwill', 'Vintage'])
+
+    await act(() => $('button[aria-label="Remove Goodwill"]')?.click())
+    assert.deepEqual(chipNames(), ['Vintage'])
+    fill($('input[name="name"]'), 'Lamp')
+    fill($('input[name="item_cost"]'), '10')
+    await act(() => clickSave($))
+    assert.deepEqual(postedTags(gate.init), ['Vintage'])
   })
 
   it('locks fields and Save while the POST is in flight, and Leave stays clickable', async (t) => {
@@ -273,4 +332,28 @@ function saveButton($: (selector: string) => HTMLElement | null): HTMLButtonElem
 
 function clickSave($: (selector: string) => HTMLElement | null) {
   saveButton($).click()
+}
+
+function addButton(): HTMLButtonElement {
+  let buttons = [...document.querySelectorAll('button[type="button"]')].filter(
+    (el): el is HTMLButtonElement => el instanceof HTMLButtonElement && el.textContent?.trim() === 'Add',
+  )
+  if (buttons.length !== 1) throw new Error('expected Add')
+  return buttons[0]!
+}
+
+function chipNames(): string[] {
+  return [...document.querySelectorAll('button[aria-label^="Remove "]')].map(
+    (el) => el.getAttribute('aria-label')!.slice('Remove '.length),
+  )
+}
+
+function postedTags(init: RequestInit | undefined): string[] {
+  let body = init?.body
+  if (!(body instanceof FormData)) throw new Error('expected FormData')
+  return body.getAll('tag').map(String)
+}
+
+function pressEnter(el: HTMLElement | null) {
+  field(el).dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
 }

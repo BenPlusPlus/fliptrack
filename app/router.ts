@@ -23,6 +23,7 @@ import flipsController from './actions/flips/controller.tsx'
 import resplitController from './actions/flips/resplit/controller.tsx'
 import undoFlipController from './actions/flips/undo/controller.tsx'
 import tagsController from './actions/tags/controller.tsx'
+import applyTagController from './actions/tags/apply/controller.tsx'
 import deleteTagController from './actions/tags/delete/controller.tsx'
 import channelsController from './actions/channels/controller.tsx'
 import deleteChannelController from './actions/channels/delete/controller.tsx'
@@ -91,6 +92,7 @@ export function createApp(options: CreateAppOptions) {
   router.map(routes.flips.resplit, resplitController)
   router.map(routes.flips.undo, undoFlipController)
   router.map(routes.tags, tagsController)
+  router.map(routes.tags.apply, applyTagController)
   router.map(routes.tags.delete, deleteTagController)
   router.map(routes.channels, channelsController)
   router.map(routes.channels.delete, deleteChannelController)

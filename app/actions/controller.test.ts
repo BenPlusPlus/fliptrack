@@ -439,7 +439,7 @@ describe('Inventory pick rows', () => {
       assert.match(soldRow, /eBay/)
       assert.match(soldRow, /Goodwill/)
       assert.doesNotMatch(soldRow, /\$13\.00/)
-      assert.doesNotMatch(soldRow, /12d|>0d</)
+      assert.doesNotMatch(soldRow, />\d+d</)
       assert.doesNotMatch(soldRow, /Live/)
       assert.doesNotMatch(soldRow, /name="flip"/)
       assert.doesNotMatch(soldRow, /href="\/listings\//)

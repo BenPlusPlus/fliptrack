@@ -4,6 +4,11 @@ import type { Tag } from '../data/schema.ts'
 import { acquisitionCostCents, type DeskPickRow, type LiveListingOnRow } from '../data/queries.ts'
 import type { OperatorIdentity } from '../middleware/auth.ts'
 import { routes } from '../routes.ts'
+import {
+  inventoryHref,
+  type InventoryFilter,
+  type InventorySegment,
+} from './inventory-href.ts'
 import { calendarDaysHeld } from '../utils/calendar.ts'
 import { AppShell } from '../ui/shell.tsx'
 import { EmptyState, Money, PageHeader, SectionLabel, Stamp } from '../ui/components.tsx'
@@ -25,17 +30,14 @@ import {
   tagRail,
 } from '../ui/styles.ts'
 
-type Segment = 'inventory' | 'sold' | 'written-off'
-type Filter = { name: string; tagIds: string[]; untagged: boolean }
-
 export function InventoryPage(handle: {
   props: {
     identity: OperatorIdentity
     csrf: string
     rows: DeskPickRow[]
     bookTags: Tag[]
-    filter: Filter
-    segment: Segment
+    filter: InventoryFilter
+    segment: InventorySegment
     today: string
   }
 }) {
@@ -159,6 +161,13 @@ export function InventoryPage(handle: {
               </EmptyState>
             ) : selectable ? (
               <form method="get" action={routes.sales.new.index.href()}>
+                {filter.name !== '' ? <input type="hidden" name="q" value={filter.name} /> : null}
+                {filter.untagged ? <input type="hidden" name="untagged" value="1" /> : null}
+                {filter.untagged
+                  ? null
+                  : filter.tagIds.map((tagId) => (
+                      <input key={tagId} type="hidden" name="tag" value={tagId} />
+                    ))}
                 <ol mix={[ledgerList, revealStagger]} id={listId}>
                   {listItems}
                 </ol>
@@ -179,6 +188,13 @@ export function InventoryPage(handle: {
                     mix={ghostAction}
                   >
                     Listing
+                  </button>
+                  <button
+                    type="submit"
+                    formaction={routes.tags.apply.index.href()}
+                    mix={ghostAction}
+                  >
+                    Tag
                   </button>
                 </div>
               </form>
@@ -311,33 +327,8 @@ function LiveListings(handle: { props: { listings: LiveListingOnRow[] } }) {
   )
 }
 
-function selectedTag(filter: Filter, tagId: string): boolean {
+function selectedTag(filter: InventoryFilter, tagId: string): boolean {
   return filter.tagIds.includes(tagId) && !filter.untagged
-}
-
-function inventoryHref(segment: Segment, filter: Filter, today: string): string {
-  let params = new URLSearchParams()
-  if (segment === 'sold') {
-    params.set('segment', 'sold')
-  }
-  if (segment === 'written-off') {
-    params.set('segment', 'written-off')
-  }
-  if (filter.name !== '') {
-    params.set('q', filter.name)
-  }
-  if (filter.untagged) {
-    params.set('untagged', '1')
-  } else {
-    for (let tagId of filter.tagIds) {
-      params.append('tag', tagId)
-    }
-  }
-  if (today !== '') {
-    params.set('today', today)
-  }
-  let query = params.toString()
-  return query === '' ? routes.inventory.href() : `${routes.inventory.href()}?${query}`
 }
 
 /* ------------------------------- local styles ----------------------------- */

@@ -297,6 +297,106 @@ describe('Add a Flip', () => {
     }
   })
 
+  it('attaches every named Tag on Save Flip, creating by naming', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      await postForm(app, started.addHref, {
+        name: 'Lamp',
+        item_cost: '10',
+        notes: '',
+        tag: ['Goodwill', 'Vintage'],
+      })
+
+      let inventory = await readBody(await fetchPage(app, routes.inventory.href()))
+      let lampHtml = await readBody(
+        await fetchPage(app, flipHrefFromInventory(inventory, 'Lamp')),
+      )
+      assert.match(lampHtml, />Goodwill</)
+      assert.match(lampHtml, />Vintage</)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('restores the submitted Tag set on the next Flip, with one field for no-JS', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      await postForm(app, started.addHref, {
+        name: 'Lamp',
+        item_cost: '10',
+        notes: '',
+        tag: ['Goodwill', 'Vintage'],
+      })
+
+      let html = await readBody(await fetchPage(app, started.addHref))
+      assert.deepEqual(tagChipNames(html), [])
+      assert.equal(tagInputValue(html), 'Goodwill')
+      assert.equal(html.match(/<input[^>]*name="tag"/g)?.length, 1)
+      let strip = html.match(/<ol[^>]*>[\s\S]*?<\/ol>/)
+      assert.ok(strip)
+      assert.match(strip[0]!, /Lamp/)
+      assert.doesNotMatch(strip[0]!, /Goodwill/)
+      assert.doesNotMatch(strip[0]!, /Vintage/)
+
+      await postForm(app, started.addHref, {
+        name: 'Vase',
+        item_cost: '8',
+        notes: '',
+        tag: ['Goodwill', 'Vintage'],
+      })
+
+      let inventory = await readBody(await fetchPage(app, routes.inventory.href()))
+      let vaseHtml = await readBody(
+        await fetchPage(app, flipHrefFromInventory(inventory, 'Vase')),
+      )
+      assert.match(vaseHtml, />Goodwill</)
+      assert.match(vaseHtml, />Vintage</)
+    } finally {
+      await app.db.close()
+    }
+  })
+
+  it('ignores duplicate Tag names, case-insensitively, and empty names', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      let started = await startAddFlip(app, {
+        acquisitionDate: '2026-08-22',
+        notes: '',
+      })
+      await postForm(app, started.addHref, {
+        name: 'Lamp',
+        item_cost: '10',
+        notes: '',
+        tag: ['Goodwill', 'goodwill', '', 'Vintage', 'Vintage'],
+      })
+
+      let inventory = await readBody(await fetchPage(app, routes.inventory.href()))
+      let lampHtml = await readBody(
+        await fetchPage(app, flipHrefFromInventory(inventory, 'Lamp')),
+      )
+      assert.equal(lampHtml.match(/>Goodwill</g)?.length, 1)
+      assert.match(lampHtml, />Vintage</)
+      assert.doesNotMatch(lampHtml, />goodwill</)
+
+      let html = await readBody(await fetchPage(app, started.addHref))
+      assert.equal(tagInputValue(html), 'Goodwill')
+      assert.deepEqual(tagChipNames(html), [])
+    } finally {
+      await app.db.close()
+    }
+  })
+
   it('keeps the Tag field after Save and attaches it to the next Flip without retyping', async () => {
     let app = await createTestApp()
     try {
@@ -364,6 +464,7 @@ describe('Add a Flip', () => {
 
       let html = await readBody(await fetchPage(app, started.addHref))
       assert.equal(tagInputValue(html), '')
+      assert.deepEqual(tagChipNames(html), [])
 
       let inventory = await readBody(await fetchPage(app, routes.inventory.href()))
       let bowlHtml = await readBody(
@@ -508,6 +609,10 @@ function tagInputValue(html: string): string {
     throw new Error('Expected a Tag field')
   }
   return input[0].match(/value="([^"]*)"/)?.[1] ?? ''
+}
+
+function tagChipNames(html: string): string[] {
+  return [...html.matchAll(/aria-label="Remove ([^"]+)"/g)].map((match) => match[1]!)
 }
 
 async function startAddFlip(
