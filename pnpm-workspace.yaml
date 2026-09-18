@@ -1,3 +1,8 @@
+# Track remix@next without the 1-day age gate. Matches renovate.jsonc.
+minimumReleaseAgeExclude:
+  - remix
+  - '@remix-run/*'
+
 allowBuilds:
   '@embedded-postgres/darwin-arm64': true
   '@embedded-postgres/darwin-x64': true
