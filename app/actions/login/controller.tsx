@@ -175,7 +175,11 @@ function LoginPage(handle: {
           <div mix={authPanel}>
             <Receipt>
               <PageHeader title="Sign in" lead="Email and password. Session lasts 30 days." />
-              {error ? <p mix={errorBanner}>{error}</p> : null}
+              {error ? (
+                <p mix={errorBanner} role="alert">
+                  {error}
+                </p>
+              ) : null}
               <form method="post" action={routes.login.action.href()} mix={fieldStack}>
                 <input type="hidden" name="_csrf" value={csrf} />
                 <label mix={labelStyle}>
