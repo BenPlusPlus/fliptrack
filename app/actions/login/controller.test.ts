@@ -41,6 +41,20 @@ describe('login and logout', () => {
     }
   })
 
+  it('shows an error when email or password is wrong', async () => {
+    let app = await createTestApp()
+    try {
+      await createOperatorViaOobe(app)
+      app.jar.clear()
+
+      let response = await login(app, { password: 'not-the-password' })
+      assert.equal(response.status, 400)
+      assert.match(await readBody(response), /Email or password is wrong/)
+    } finally {
+      await app.db.close()
+    }
+  })
+
   it('does not mention /oobe on login once an Operator exists', async () => {
     let app = await createTestApp()
     try {
