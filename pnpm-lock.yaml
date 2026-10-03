@@ -167,15 +167,15 @@ importers:
   .:
     dependencies:
       pg:
-        specifier: 8.23.0
-        version: 8.23.0
+        specifier: 8.23.1
+        version: 8.23.1
       remix:
         specifier: 3.0.0-rc.3
-        version: 3.0.0-rc.3(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.0)(playwright@1.63.0)
+        version: 3.0.0-rc.3(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.1)(playwright@1.63.0)
     devDependencies:
       '@types/node':
         specifier: latest
-        version: 26.6.3
+        version: 26.6.4
       '@types/pg':
         specifier: 8.23.1
         version: 8.23.1
@@ -1094,6 +1094,9 @@ packages:
   '@types/node@26.6.3':
     resolution: {integrity: sha512-dsqMQQoeTLqu9wynDD00q573mNzso3IdQOAfHRJqLCcmCFPoGo9A1bDpUcv/9tnKpErQWv9uKeGfl37EIS02Yg==}
 
+  '@types/node@26.6.4':
+    resolution: {integrity: sha512-ldVPDCzj7fsaGZrLB0NuHuTvJcsNasysBAqMolr/cgxrLd1xbqxIr3XJiPnHHJUCxj5sNF1vnRj9aWnrVh5Jcg==}
+
   '@types/pg@8.23.1':
     resolution: {integrity: sha512-fKVHpikPdg4GKks3JuLEhvwSyvwzF23hnabPy6DD8ljVbC7+6J5dQzdv4arV6jqq57djnMgs1HKBxX4P8aBI3A==}
 
@@ -1368,11 +1371,11 @@ packages:
     resolution: {integrity: sha512-Kf243wJU/vWF/ThV+ZyfLMQIrViVFRSyYO7UPKpZMMPGGMzxxcHgsNGWy0Uy+pcXD78+jdUnxVTR9rYT73Qw3A==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
-  pg-cloudflare@1.4.0:
-    resolution: {integrity: sha512-Vo7z/6rrQYxpNRylp4Tlob2elzbh+N/MOQbxFVWCxS7oEx6jF53GTJFxK2WWpKuBRkmiin4Mt+xofFDjx09R0A==}
+  pg-cloudflare@1.4.1:
+    resolution: {integrity: sha512-6PQbsFWZcp9EmJEwy5cGQ2La+AMWpP46lgbb8X+U/XsHIUweYDNCpeuKck5RxL2MdVFi7krbbEi5nX4Zh7JhrQ==}
 
-  pg-connection-string@2.14.0:
-    resolution: {integrity: sha512-XwWDGcLRGCXAR8F/AM5bG7Q+A3Wm2s6QeEjlOKZLlH3UYcguiqCWKyWXVag5TLTIjR7oOJUY8kcADaZgWPyLeg==}
+  pg-connection-string@2.14.1:
+    resolution: {integrity: sha512-qR3kGNPBLpCNtz0evbKA0Y/MRFXwSSdT+pTJvYp/bXTcReZbvX1kzF0IyTc1QnxqF7AZbOeBhNL8R5mYQZV/MA==}
 
   pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
@@ -1386,12 +1389,15 @@ packages:
   pg-protocol@1.16.0:
     resolution: {integrity: sha512-sILXutLVjCLjcDuOmvhX5e2Z4cS5qG/6Bu3VkpFwdf/633ElGLpEh9bgmuI5I4sqKqkifQiGyiCcx1HdtrK7tg==}
 
+  pg-protocol@1.16.1:
+    resolution: {integrity: sha512-p9VOFMiHB/ZbJATetbg+99PxssTVSQRnyuPSQ67mN1+1KBOjZaZ83ZQzltnxPhJwSsC3nwVjJ10DVJlerbFzLg==}
+
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
 
-  pg@8.23.0:
-    resolution: {integrity: sha512-Ip2EQCngowJLGOfCwkFhPXU7/ljlhn6Rxlmy4XYfL2Y+vyRM59+8uR2xqRWKdYmbXmxCFOAmKxBuSUCdF34qLg==}
+  pg@8.23.1:
+    resolution: {integrity: sha512-aL96AHANtWjPLDOLqnhx+ngp9+UK7ETEU8VJrDCGvsSSi/mGLcWYsS6Herg7lmaBJe4uwrfqsa7gTEFaSizDoQ==}
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       pg-native: '>=3.0.1'
@@ -1927,12 +1933,12 @@ snapshots:
       '@remix-run/fetch-router': 0.22.1
       '@remix-run/session': 0.4.2
 
-  '@remix-run/cli@0.7.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.0)(playwright@1.63.0)':
+  '@remix-run/cli@0.7.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.1)(playwright@1.63.0)':
     dependencies:
       '@remix-run/assets': 0.7.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
       '@remix-run/data-table': 0.6.0
       '@remix-run/data-table-mysql': 0.5.3
-      '@remix-run/data-table-postgres': 0.5.3(pg@8.23.0)
+      '@remix-run/data-table-postgres': 0.5.3(pg@8.23.1)
       '@remix-run/data-table-sqlite': 0.6.3
       '@remix-run/terminal': 0.1.1
       '@remix-run/test': 0.6.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(playwright@1.63.0)
@@ -1977,11 +1983,11 @@ snapshots:
     dependencies:
       '@remix-run/data-table': 0.6.0
 
-  '@remix-run/data-table-postgres@0.5.3(pg@8.23.0)':
+  '@remix-run/data-table-postgres@0.5.3(pg@8.23.1)':
     dependencies:
       '@remix-run/data-table': 0.6.0
     optionalDependencies:
-      pg: 8.23.0
+      pg: 8.23.1
 
   '@remix-run/data-table-sqlite@0.6.3':
     dependencies:
@@ -2173,6 +2179,10 @@ snapshots:
     dependencies:
       undici-types: 8.9.0
 
+  '@types/node@26.6.4':
+    dependencies:
+      undici-types: 8.9.0
+
   '@types/pg@8.23.1':
     dependencies:
       '@types/node': 26.6.3
@@ -2254,7 +2264,7 @@ snapshots:
   embedded-postgres@18.1.0-beta.16:
     dependencies:
       async-exit-hook: 2.0.1
-      pg: 8.23.0
+      pg: 8.23.1
     optionalDependencies:
       '@embedded-postgres/darwin-arm64': 18.1.0-beta.16
       '@embedded-postgres/darwin-x64': 18.1.0-beta.16
@@ -2480,18 +2490,20 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  pg-cloudflare@1.4.0:
+  pg-cloudflare@1.4.1:
     optional: true
 
-  pg-connection-string@2.14.0: {}
+  pg-connection-string@2.14.1: {}
 
   pg-int8@1.0.1: {}
 
-  pg-pool@3.14.0(pg@8.23.0):
+  pg-pool@3.14.0(pg@8.23.1):
     dependencies:
-      pg: 8.23.0
+      pg: 8.23.1
 
   pg-protocol@1.16.0: {}
+
+  pg-protocol@1.16.1: {}
 
   pg-types@2.2.0:
     dependencies:
@@ -2501,15 +2513,15 @@ snapshots:
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
 
-  pg@8.23.0:
+  pg@8.23.1:
     dependencies:
-      pg-connection-string: 2.14.0
-      pg-pool: 3.14.0(pg@8.23.0)
-      pg-protocol: 1.16.0
+      pg-connection-string: 2.14.1
+      pg-pool: 3.14.0(pg@8.23.1)
+      pg-protocol: 1.16.1
       pg-types: 2.2.0
       pgpass: 1.0.5
     optionalDependencies:
-      pg-cloudflare: 1.4.0
+      pg-cloudflare: 1.4.1
 
   pgpass@1.0.5:
     dependencies:
@@ -2535,14 +2547,14 @@ snapshots:
 
   readdirp@5.1.1: {}
 
-  remix@3.0.0-rc.3(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.0)(playwright@1.63.0):
+  remix@3.0.0-rc.3(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.1)(playwright@1.63.0):
     dependencies:
       '@remix-run/assert': 0.3.0
       '@remix-run/assets': 0.7.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
       '@remix-run/async-context-middleware': 0.3.7
       '@remix-run/auth': 0.3.2
       '@remix-run/auth-middleware': 0.2.7
-      '@remix-run/cli': 0.7.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.0)(playwright@1.63.0)
+      '@remix-run/cli': 0.7.1(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)(pg@8.23.1)(playwright@1.63.0)
       '@remix-run/compression-middleware': 0.1.15
       '@remix-run/cookie': 0.7.0
       '@remix-run/cop-middleware': 0.1.10
@@ -2551,7 +2563,7 @@ snapshots:
       '@remix-run/data-schema': 0.3.1
       '@remix-run/data-table': 0.6.0
       '@remix-run/data-table-mysql': 0.5.3
-      '@remix-run/data-table-postgres': 0.5.3(pg@8.23.0)
+      '@remix-run/data-table-postgres': 0.5.3(pg@8.23.1)
       '@remix-run/data-table-sqlite': 0.6.3
       '@remix-run/fetch-proxy': 0.8.6
       '@remix-run/fetch-router': 0.22.1
@@ -2586,7 +2598,7 @@ snapshots:
       '@remix-run/ui': 0.10.0
       '@remix-run/ui-hmr': 0.1.0(@emnapi/core@1.11.2)(@emnapi/runtime@1.11.2)
     optionalDependencies:
-      pg: 8.23.0
+      pg: 8.23.1
       playwright: 1.63.0
     transitivePeerDependencies:
       - '@emnapi/core'
