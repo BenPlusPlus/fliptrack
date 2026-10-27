@@ -1,4 +1,4 @@
-import { clientEntry, css, on, ref, type Handle } from 'remix/ui'
+import { clientEntry, css, on, ref, type Handle } from 'remix/component'
 
 import { ActionStack, Money, MoneyField, PageHeader, Receipt, SectionLabel } from '../../../../ui/components.tsx'
 import {

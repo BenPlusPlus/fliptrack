@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 import type { OperatorIdentity } from '../../middleware/auth.ts'
 import { acquisitionCostCents, type AcquisitionIndexRow } from '../../data/queries.ts'

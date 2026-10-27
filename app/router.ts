@@ -109,7 +109,7 @@ export function createApp(options: CreateAppOptions) {
 export type AppRouter = ReturnType<typeof createApp>['router']
 export type AppContext = RouterContext<AppRouter>
 
-declare module 'remix/router' {
+declare module 'remix' {
   interface RouterTypes {
     context: AppContext
   }

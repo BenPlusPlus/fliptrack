@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 import type { OperatorIdentity } from '../middleware/auth.ts'
 import type { Channel, Tag } from '../data/schema.ts'

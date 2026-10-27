@@ -14,7 +14,7 @@ This skill is the quick guide. When you need fuller API documentation, examples,
 Examples:
 
 - `remix/router` -> `node_modules/remix/src/fetch-router/README.md`
-- `remix/ui/button` -> `node_modules/remix/src/ui/button/README.md`
+- `remix/component` -> `node_modules/remix/src/component/README.md`
 
 ## What Remix Is
 
@@ -25,7 +25,7 @@ A Remix app has four main pieces:
 - **Routes** in `app/routes.ts` define the typed URL contract and power `href()` generation.
 - **Controllers** in `app/actions` implement that contract and return `Response` objects.
 - **Middleware** composes request lifecycle behavior and populates typed context via `context.set(Key, value)`.
-- **Components** render UI with `remix/ui`. This is not React. A component receives a `handle`, reads current props from `handle.props`, and returns a zero-argument render function.
+- **Components** render UI with `remix/component`. This is not React. A component receives a `handle`, reads current props from `handle.props`, and returns a zero-argument render function.
 
 ## When To Use This Skill
 
@@ -123,8 +123,8 @@ When code could live in multiple places:
 ### Response Rendering And Utilities
 
 - Treat response rendering as action-layer code: modules that return `Response`, choose HTTP status or headers, call `redirect(...)`, or call the local `render(...)` helper belong in `app/actions`
-- Keep `app/actions/render.tsx` small; it should adapt `remix/ui/server` output to `createHtmlResponse(...)`. Route-specific response assembly can live in flat action modules, but directories under `app/actions/` must still match route-map keys
-- Put pure support code in focused `app/utils/<topic>.ts` modules. Formatting, MIME classification, path parsing, sorting, and normalization should be testable without a router, request context, or `Response`, and should not import from `app/actions`, `remix/ui/server`, or `remix/response/*`
+- Keep `app/actions/render.tsx` small; it should adapt `remix/component/server` output to `createHtmlResponse(...)`. Route-specific response assembly can live in flat action modules, but directories under `app/actions/` must still match route-map keys
+- Put pure support code in focused `app/utils/<topic>.ts` modules. Formatting, MIME classification, path parsing, sorting, and normalization should be testable without a router, request context, or `Response`, and should not import from `app/actions`, `remix/component/server`, or `remix/response/*`
 - Do not introduce page-data intermediary shapes only to keep route-specific renderers away from `render(...)`; keep response assembly in actions and extract only the pure helpers
 
 ### Layout Anti-Patterns
@@ -214,7 +214,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/assets/types/hmr` — type-only entry for `import.meta.hot` in browser modules compiled by `remix/assets`
 - `remix/headers` — `SuperHeaders` plus typed header parsers and builders. Use the default export when you want a `Headers` subclass with typed accessors like `headers.contentType`, `headers.cacheControl`, and `headers.setCookie`; use named classes such as `CacheControl`, `ContentDisposition`, and `Vary` when working with individual header values
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect" pattern and other location changes
-- `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string or stream without rendering through `remix/ui`
+- `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string or stream without rendering through `remix/component`
 - `remix/response/compress` — `compressResponse`. Use when compressing one-off responses outside `compression()` middleware
 - `remix/response/file` — file-download responses. Use for `Content-Disposition: attachment` responses
 - `remix/route-pattern` — low-level URL matching and generation. Use `RoutePattern` or `createMatcher` when working with raw patterns outside the router. `href(...)` encodes pathname and search params for you, and `match(...)` returns decoded params
@@ -248,16 +248,16 @@ Use this map to find the right package quickly. Each entry says what the package
 
 ### UI, Hydration, and Browser Behavior
 
-- `remix/ui` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`, navigation helpers, and `createRoot`. Use for app UI behavior
-- `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the `app/actions/render.tsx` helper that returns HTML responses
-- `remix/ui-hmr` — direct Remix UI component HMR transforms. Use only when writing a custom module hook or build integration
-- `remix/ui-hmr/node` — Node import hook for Remix UI component HMR. Use with `--import remix/ui-hmr/node` in development servers that run through `remix/node-hmr`
-- `remix/ui-hmr/assets` — `remix/assets` loader for Remix UI component HMR. Use `uiHmr()` in `createAssetServer({ scripts: { loaders } })` during development
-- `remix/ui/dev/refresh` — development refresh support used by HMR tooling, not normal application code
-- `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`, `spring`, `tween`, and `easings`
-- `remix/ui/<primitive>` — UI primitives, mixins, and component helpers. Current subpaths include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/button`, `remix/ui/checkbox`, `remix/ui/combobox`, `remix/ui/input`, `remix/ui/listbox`, `remix/ui/menu`, `remix/ui/popover`, and `remix/ui/select`
-- `remix/ui/test` — component test rendering helpers such as `render`
-- `remix/ui/jsx-runtime` and `remix/ui/jsx-dev-runtime` — JSX transform targets. Configured in `tsconfig.json`, rarely imported directly
+- `remix/component` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`, navigation helpers, and `createRoot`. Use for app UI behavior
+- `remix/component/server` — server rendering: `renderToStream`, `renderToString`. Use in the `app/actions/render.tsx` helper that returns HTML responses
+- `remix/component-hmr` — direct Remix UI component HMR transforms. Use only when writing a custom module hook or build integration
+- `remix/component-hmr/node` — Node import hook for Remix UI component HMR. Use with `--import remix/component-hmr/node` in development servers that run through `remix/node-hmr`
+- `remix/component-hmr/assets` — `remix/assets` loader for Remix UI component HMR. Use `componentHmr()` in `createAssetServer({ scripts: { loaders } })` during development
+- `remix/component/dev/refresh` — development refresh support used by HMR tooling, not normal application code
+- `@remix-run/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`, `spring`, `tween`, and `easings`. Lives in the separate `@remix-run/ui` package, which is versioned independently and is not part of the stable `remix` 3.x release.
+- `@remix-run/ui/<primitive>` — headless, accessible UI primitives from `@remix-run/ui`. Current subpaths include `accordion`, `anchor`, `combobox`, `listbox`, `menu`, `popover`, `select`, `tabs`, and `toggle`. Install `@remix-run/ui` only when the app uses these APIs, and add it to `allowPackages` when the asset server restricts package imports.
+- `remix/component/test` — component test rendering helpers such as `render`
+- `remix/component/jsx-runtime` and `remix/component/jsx-dev-runtime` — JSX transform targets. Configured in `tsconfig.json`, rarely imported directly
 - `remix/html-template` — escaped HTML template literals. Use when generating HTML outside the component system (RSS feeds, email bodies, error pages)
 - `remix/file-storage` — backend-agnostic `File` storage interface. Use as the type bound for upload destinations
 - `remix/file-storage/fs`, `remix/file-storage/memory`, `remix/file-storage/s3` — storage backends. Use to implement an upload destination
@@ -429,7 +429,7 @@ This shape works without JavaScript, returns a `Response` for every outcome, and
 ### Build UI from handle props plus render
 
 ```tsx
-import { on, type Handle } from 'remix/ui'
+import { on, type Handle } from 'remix/component'
 
 function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
   let count = handle.props.initialCount ?? 0

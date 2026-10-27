@@ -1,4 +1,4 @@
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import { formatCents } from "../utils/cents.ts";
 import { routes } from "../routes.ts";
