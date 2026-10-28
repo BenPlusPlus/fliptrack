@@ -34,7 +34,7 @@ import {
   tagRail,
   tagSection,
 } from '../../ui/styles.ts'
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 import { mustGet } from '../../utils/context.ts'
 import { centsToInput, formatCents, parseCents } from '../../utils/cents.ts'
 

@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 import { getCsrfToken } from 'remix/middleware/csrf'
 import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'

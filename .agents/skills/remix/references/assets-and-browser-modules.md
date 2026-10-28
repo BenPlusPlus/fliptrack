@@ -94,7 +94,7 @@ In development:
 - Prefer stable URLs with normal revalidation
 - Enable source maps when debugging browser code
 - Use `hmr` only when the app is running under `remix/node-hmr`
-- Use `scripts.loaders` for development-only browser transforms such as `uiHmr()`
+- Use `scripts.loaders` for development-only browser transforms such as `componentHmr()`
 
 In deployment:
 
@@ -110,7 +110,7 @@ Use browser HMR when source-served browser modules should update without a full 
 
 ```typescript
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets'
+import { componentHmr } from 'remix/component-hmr/assets'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 const isHmr = Boolean(isDevelopment && process.env.REMIX_NODE_HMR)
@@ -125,7 +125,7 @@ const assetServer = createAssetServer({
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
   scripts: {
-    loaders: isHmr ? [uiHmr()] : undefined,
+    loaders: isHmr ? [componentHmr()] : undefined,
   },
 })
 ```

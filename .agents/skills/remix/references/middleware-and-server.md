@@ -243,7 +243,7 @@ const hmrRunner = run('./server.ts', {
     PORT: String(appPort),
     HMR_PROXY_PORT: String(hmrProxyPort),
   },
-  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/component-hmr/node'],
   browserHmrChannel: { port: hmrEventPort },
 })
 
@@ -273,6 +273,6 @@ server.listen(port, () => {
 Rules:
 
 - Guard `remix/node-hmr/runtime` imports with `process.env.REMIX_NODE_HMR`.
-- Use `--import remix/ui-hmr/node` only when server-rendered Remix UI component modules should hot update.
+- Use `--import remix/component-hmr/node` only when server-rendered Remix UI component modules should hot update.
 - Keep the default development and production startup paths independent from `hmr.ts`.
 - Close the public server and `hmrRunner` during `SIGINT` and `SIGTERM` shutdown.

@@ -1,4 +1,4 @@
-import { clientEntry, ref, type Handle } from 'remix/ui'
+import { clientEntry, ref, type Handle } from 'remix/component'
 
 import { localToday } from '../../utils/calendar.ts'
 

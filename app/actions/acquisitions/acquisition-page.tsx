@@ -1,4 +1,4 @@
-import { css } from 'remix/ui'
+import { css } from 'remix/component'
 
 import type { OperatorIdentity } from '../../middleware/auth.ts'
 import type { Acquisition, Flip } from '../../data/schema.ts'

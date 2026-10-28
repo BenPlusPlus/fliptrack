@@ -1,4 +1,4 @@
-import { css, type RemixNode } from 'remix/ui'
+import { css, type RemixNode } from 'remix/component'
 
 import type { Tag } from '../data/schema.ts'
 import { acquisitionCostCents, type DeskPickRow, type LiveListingOnRow } from '../data/queries.ts'
