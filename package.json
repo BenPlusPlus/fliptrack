@@ -2,7 +2,7 @@
   "name": "fliptrack",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@12.18.0",
+  "packageManager": "pnpm@12.21.0",
   "scripts": {
     "dev": "node --watch --import remix/node-tsx server.ts",
     "hmr": "node hmr.ts",
@@ -24,7 +24,7 @@
     "@types/node": "latest",
     "@types/pg": "8.23.1",
     "embedded-postgres": "18.1.0-beta.16",
-    "playwright": "1.65.0",
+    "playwright": "1.65.1",
     "typescript": "latest"
   }
 }
