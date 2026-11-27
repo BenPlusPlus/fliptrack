@@ -2,7 +2,11 @@ FROM node:26.13.1-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@12.4.0 --activate
+# Node 25+ no longer bundles corepack, so install pnpm with npm.
+# Keep in sync with "packageManager" in package.json (Renovate bumps both).
+# renovate: datasource=npm depName=pnpm
+ARG PNPM_VERSION=12.23.0
+RUN npm install -g pnpm@${PNPM_VERSION}
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile --prod
