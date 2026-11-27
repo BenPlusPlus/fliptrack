@@ -2,7 +2,8 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:best-practices",
-    ":pinAllExceptPeerDependencies"
+    ":pinAllExceptPeerDependencies",
+    "customManagers:dockerfileVersions"
   ],
   "labels": ["dependencies"],
   "lockFileMaintenance": {
@@ -10,6 +11,11 @@
     "automerge": true
   },
   "packageRules": [
+    {
+      "description": "Bump pnpm in package.json and the Dockerfile in one PR.",
+      "matchPackageNames": ["pnpm"],
+      "groupName": "pnpm"
+    },
     {
       "description": "Automerge non-major npm updates. Skip 0.x (SemVer allows breaks there).",
       "matchDatasources": ["npm"],
